@@ -1,101 +1,61 @@
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useDispatch } from 'react-redux';
-import useDropDownSelection from './useDropDownSelection';
-import { setSelectedValues } from '../../redux/DropDowns/action';
+import axios from 'axios';
+import service from './service';  // Import the service
 
-// Mock the redux dispatch and action
-jest.mock('react-redux', () => ({
-  useDispatch: jest.fn(),
-}));
+jest.mock('axios'); // Mock the entire axios module
 
-jest.mock('../../redux/DropDowns/action', () => ({
-  setSelectedValues: jest.fn(),
-}));
+describe('Axios Service', () => {
+  let mockConfig;
 
-describe('useDropDownSelection Hook', () => {
-  const mockDispatch = jest.fn();
-  
   beforeEach(() => {
-    useDispatch.mockReturnValue(mockDispatch);
-    jest.clearAllMocks();
+    mockConfig = { url: '/test', method: 'get' };
+    axios.create.mockReturnValue(axios); // Make sure axios.create returns the mock axios
   });
 
-  it('should initialize inputValue as an empty array when multiple is true', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', true));
-
-    expect(result.current.inputValue).toEqual([]);
+  it('should have the correct baseURL', () => {
+    expect(service.defaults.baseURL).toBe('$multiCpBaseUrl');
   });
 
-  it('should initialize inputValue as null when multiple is false', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', false));
+  it('should pass request configuration unchanged in request interceptor', async () => {
+    // Mock the request interceptor
+    axios.request.mockResolvedValue({ data: {} });
 
-    expect(result.current.inputValue).toBeNull();
+    // Trigger the request
+    const response = await service(mockConfig);
+
+    // Expect request config to remain the same
+    expect(axios.request).toHaveBeenCalledWith(mockConfig);
+    expect(response).toEqual({}); // since we return response.data in the response interceptor
   });
 
-  it('should handle input change when multiple is true', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', true));
+  it('should handle request error in request interceptor', async () => {
+    const testError = new Error('Request error');
 
-    const mockEvent = {}; // Simulate event if needed
-    const mockValue = ['Option1', 'Option2'];
+    // Mock request error
+    axios.request.mockRejectedValue(testError);
 
-    act(() => {
-      result.current.onInputChange(mockEvent, mockValue);
-    });
-
-    // Verify inputValue state is updated correctly
-    expect(result.current.inputValue).toEqual(mockValue);
-
-    // Verify dispatch is called with correct values
-    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', mockValue));
+    // Call the service and expect it to throw the error
+    await expect(service(mockConfig)).rejects.toThrow(testError);
   });
 
-  it('should handle input change when multiple is false', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', false));
+  it('should return response data from the response interceptor', async () => {
+    const mockData = { message: 'success' };
 
-    const mockEvent = {};
-    const mockValue = 'Option1';
+    // Mock a successful response
+    axios.request.mockResolvedValue({ data: mockData });
 
-    act(() => {
-      result.current.onInputChange(mockEvent, mockValue);
-    });
+    const response = await service(mockConfig);
 
-    // Verify inputValue state is updated correctly
-    expect(result.current.inputValue).toEqual(mockValue);
-
-    // Verify dispatch is called with correct values
-    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', mockValue));
+    // Expect the response data to be passed through the response interceptor
+    expect(response).toEqual(mockData);
   });
 
-  it('should set inputValue to null when value is null and multiple is false', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', false));
+  it('should handle response error in response interceptor', async () => {
+    const testError = new Error('Response error');
 
-    act(() => {
-      result.current.onInputChange({}, null);
-    });
+    // Mock a failed response
+    axios.request.mockRejectedValue(testError);
 
-    expect(result.current.inputValue).toBeNull();
-    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
-  });
-
-  it('should set inputValue to an empty array when value is null and multiple is true', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', true));
-
-    act(() => {
-      result.current.onInputChange({}, null);
-    });
-
-    expect(result.current.inputValue).toEqual([]);
-    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
-  });
-
-  it('should set inputValue to an empty array when value is empty and multiple is true', () => {
-    const { result } = renderHook(() => useDropDownSelection('testKey', true));
-
-    act(() => {
-      result.current.onInputChange({}, []);
-    });
-
-    expect(result.current.inputValue).toEqual([]);
-    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
+    // Call the service and expect it to throw the error
+    await expect(service(mockConfig)).rejects.toThrow(testError);
   });
 });
