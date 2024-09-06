@@ -4,20 +4,24 @@ import service from './service'; // Import your service
 // Mock the entire axios module
 jest.mock('axios');
 
-// Mock the axios.create() method and the instance it returns
-const mockRequest = jest.fn();
-const mockCreate = jest.fn(() => ({
-  request: mockRequest,
+// Create mock functions for interceptors
+const mockRequestInterceptor = jest.fn();
+const mockResponseInterceptor = jest.fn();
+
+// Create a mock instance of axios
+const mockAxiosInstance = {
+  request: jest.fn(),
   interceptors: {
-    request: { use: jest.fn(), eject: jest.fn() },
-    response: { use: jest.fn(), eject: jest.fn() }
+    request: { use: mockRequestInterceptor, eject: jest.fn() },
+    response: { use: mockResponseInterceptor, eject: jest.fn() }
   },
   defaults: {
     baseURL: '$multiCpBaseUrl'
   }
-}));
+};
 
-axios.create = mockCreate;
+// Mock axios.create() to return the mock instance
+axios.create.mockReturnValue(mockAxiosInstance);
 
 describe('Axios Service', () => {
   let mockConfig;
@@ -32,13 +36,13 @@ describe('Axios Service', () => {
 
   it('should pass request configuration unchanged in request interceptor', async () => {
     // Mock successful request
-    mockRequest.mockResolvedValue({ data: {} });
+    mockAxiosInstance.request.mockResolvedValue({ data: {} });
 
     // Trigger the request
     const response = await service(mockConfig);
 
     // Expect the request config to remain the same
-    expect(mockRequest).toHaveBeenCalledWith(mockConfig);
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(mockConfig);
     expect(response).toEqual({});
   });
 
@@ -46,7 +50,7 @@ describe('Axios Service', () => {
     const testError = new Error('Request error');
 
     // Mock request error
-    mockRequest.mockRejectedValue(testError);
+    mockAxiosInstance.request.mockRejectedValue(testError);
 
     // Call the service and expect it to throw the error
     await expect(service(mockConfig)).rejects.toThrow(testError);
@@ -56,7 +60,7 @@ describe('Axios Service', () => {
     const mockData = { message: 'success' };
 
     // Mock successful response
-    mockRequest.mockResolvedValue({ data: mockData });
+    mockAxiosInstance.request.mockResolvedValue({ data: mockData });
 
     const response = await service(mockConfig);
 
@@ -68,7 +72,7 @@ describe('Axios Service', () => {
     const testError = new Error('Response error');
 
     // Mock failed response
-    mockRequest.mockRejectedValue(testError);
+    mockAxiosInstance.request.mockRejectedValue(testError);
 
     // Call the service and expect it to throw the error
     await expect(service(mockConfig)).rejects.toThrow(testError);
