@@ -1,117 +1,101 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { useSelector } from 'react-redux';
-import CPStatus from './CPStatus';
-import { useDropDownSelection } from '../../../hooks/useDropDownSelection';
-import '@testing-library/jest-dom/extend-expect';
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useDispatch } from 'react-redux';
+import useDropDownSelection from './useDropDownSelection';
+import { setSelectedValues } from '../../redux/DropDowns/action';
 
-// Mock useSelector from redux
+// Mock the redux dispatch and action
 jest.mock('react-redux', () => ({
-    useSelector: jest.fn(),
+  useDispatch: jest.fn(),
 }));
 
-// Mock useDropDownSelection hook
-jest.mock('../../../hooks/useDropDownSelection', () => ({
-    useDropDownSelection: jest.fn(),
+jest.mock('../../redux/DropDowns/action', () => ({
+  setSelectedValues: jest.fn(),
 }));
 
-describe('CPStatus Component', () => {
-    const mockCounterpartyStatus = {
-        value: [
-            { value: 'Option 1' },
-            { value: 'Option 2' },
-        ],
-    };
+describe('useDropDownSelection Hook', () => {
+  const mockDispatch = jest.fn();
+  
+  beforeEach(() => {
+    useDispatch.mockReturnValue(mockDispatch);
+    jest.clearAllMocks();
+  });
 
-    const mockOnInputChange = jest.fn();
-    const mockInputValueCPStatus = 'mockValue';
+  it('should initialize inputValue as an empty array when multiple is true', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', true));
 
-    const mockDropdownKey = 'counterpartyStatus'; // Simulate dropdown key from config
-    const mockMultiple = true; // Simulate the multiple prop
+    expect(result.current.inputValue).toEqual([]);
+  });
 
-    beforeEach(() => {
-        // Mock useSelector to return counterpartyStatus
-        useSelector.mockImplementation((callback) =>
-            callback({
-                multiSearch: {
-                    dropDowns: {
-                        counterpartyStatus: mockCounterpartyStatus,
-                    },
-                },
-            })
-        );
+  it('should initialize inputValue as null when multiple is false', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', false));
 
-        // Mock useDropDownSelection to return onInputChange function and inputValue
-        useDropDownSelection.mockImplementation((dropdownKey, multiple) => {
-            // Assert correct parameters are passed to useDropDownSelection
-            expect(dropdownKey).toEqual(mockDropdownKey);
-            expect(multiple).toEqual(mockMultiple);
+    expect(result.current.inputValue).toBeNull();
+  });
 
-            return {
-                onInputChange: mockOnInputChange,
-                inputValueCPStatus: mockInputValueCPStatus,
-            };
-        });
+  it('should handle input change when multiple is true', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', true));
+
+    const mockEvent = {}; // Simulate event if needed
+    const mockValue = ['Option1', 'Option2'];
+
+    act(() => {
+      result.current.onInputChange(mockEvent, mockValue);
     });
 
-    afterEach(() => {
-        jest.clearAllMocks();
+    // Verify inputValue state is updated correctly
+    expect(result.current.inputValue).toEqual(mockValue);
+
+    // Verify dispatch is called with correct values
+    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', mockValue));
+  });
+
+  it('should handle input change when multiple is false', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', false));
+
+    const mockEvent = {};
+    const mockValue = 'Option1';
+
+    act(() => {
+      result.current.onInputChange(mockEvent, mockValue);
     });
 
-    it('renders CPStatus component with multiple options', () => {
-        render(<CPStatus multiple={mockMultiple} />);
+    // Verify inputValue state is updated correctly
+    expect(result.current.inputValue).toEqual(mockValue);
 
-        // Assert the component renders correctly
-        expect(screen.getByTestId('CPStatus-testid')).toBeInTheDocument();
-        expect(screen.getByText('CPStatus / Category')).toBeInTheDocument();
+    // Verify dispatch is called with correct values
+    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', mockValue));
+  });
 
-        // Assert the options are rendered correctly
-        mockCounterpartyStatus.value.forEach(option => {
-            expect(screen.getByText(option.value)).toBeInTheDocument();
-        });
+  it('should set inputValue to null when value is null and multiple is false', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', false));
+
+    act(() => {
+      result.current.onInputChange({}, null);
     });
 
-    it('calls onInputChange when option is selected', () => {
-        render(<CPStatus multiple={mockMultiple} />);
+    expect(result.current.inputValue).toBeNull();
+    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
+  });
 
-        const inputElement = screen.getByTestId('CPStatus-testid');
+  it('should set inputValue to an empty array when value is null and multiple is true', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', true));
 
-        // Simulate selecting an option
-        fireEvent.change(inputElement, { target: { value: 'Option 1' } });
-
-        // Assert onInputChange has been called
-        expect(mockOnInputChange).toHaveBeenCalledTimes(1);
+    act(() => {
+      result.current.onInputChange({}, null);
     });
 
-    it('handles single selection mode correctly', () => {
-        render(<CPStatus multiple={false} />);
+    expect(result.current.inputValue).toEqual([]);
+    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
+  });
 
-        // Assert that it still renders in single select mode
-        expect(screen.getByTestId('CPStatus-testid')).toBeInTheDocument();
+  it('should set inputValue to an empty array when value is empty and multiple is true', () => {
+    const { result } = renderHook(() => useDropDownSelection('testKey', true));
+
+    act(() => {
+      result.current.onInputChange({}, []);
     });
 
-    it('handles empty counterpartyStatus correctly', () => {
-        // Mock useSelector to return empty counterpartyStatus
-        useSelector.mockImplementation((callback) =>
-            callback({
-                multiSearch: {
-                    dropDowns: {
-                        counterpartyStatus: { value: [] },
-                    },
-                },
-            })
-        );
-
-        render(<CPStatus multiple={mockMultiple} />);
-
-        // Ensure no options are rendered
-        expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
-    });
-
-    it('displays the correct input value', () => {
-        render(<CPStatus multiple={mockMultiple} />);
-
-        // Assert that inputValueCPStatus is used correctly
-        expect(screen.getByDisplayValue(mockInputValueCPStatus)).toBeInTheDocument();
-    });
+    expect(result.current.inputValue).toEqual([]);
+    expect(mockDispatch).toHaveBeenCalledWith(setSelectedValues('testKey', null));
+  });
 });
