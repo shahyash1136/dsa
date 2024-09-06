@@ -40,9 +40,10 @@ describe('CPStatus Component', () => {
         );
 
         // Mock useDropDownSelection to return onInputChange function
-        useDropDownSelection.mockReturnValue({
+        useDropDownSelection.mockImplementation(() => ({
             onInputChange: mockOnInputChange,
-        });
+            inputValueCPStatus: '',  // Add a mock value for inputValueCPStatus
+        }));
     });
 
     afterEach(() => {
