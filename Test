@@ -1,5 +1,3 @@
-// CPStatus.test.js
-
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useSelector } from 'react-redux';
@@ -26,6 +24,10 @@ describe('CPStatus Component', () => {
     };
 
     const mockOnInputChange = jest.fn();
+    const mockInputValueCPStatus = 'mockValue';
+
+    const mockDropdownKey = 'counterpartyStatus'; // Simulate dropdown key from config
+    const mockMultiple = true; // Simulate the multiple prop
 
     beforeEach(() => {
         // Mock useSelector to return counterpartyStatus
@@ -39,11 +41,17 @@ describe('CPStatus Component', () => {
             })
         );
 
-        // Mock useDropDownSelection to return onInputChange function
-        useDropDownSelection.mockImplementation(() => ({
-            onInputChange: mockOnInputChange,
-            inputValueCPStatus: '',  // Add a mock value for inputValueCPStatus
-        }));
+        // Mock useDropDownSelection to return onInputChange function and inputValue
+        useDropDownSelection.mockImplementation((dropdownKey, multiple) => {
+            // Assert correct parameters are passed to useDropDownSelection
+            expect(dropdownKey).toEqual(mockDropdownKey);
+            expect(multiple).toEqual(mockMultiple);
+
+            return {
+                onInputChange: mockOnInputChange,
+                inputValueCPStatus: mockInputValueCPStatus,
+            };
+        });
     });
 
     afterEach(() => {
@@ -51,7 +59,7 @@ describe('CPStatus Component', () => {
     });
 
     it('renders CPStatus component with multiple options', () => {
-        render(<CPStatus multiple={true} />);
+        render(<CPStatus multiple={mockMultiple} />);
 
         // Assert the component renders correctly
         expect(screen.getByTestId('CPStatus-testid')).toBeInTheDocument();
@@ -64,7 +72,7 @@ describe('CPStatus Component', () => {
     });
 
     it('calls onInputChange when option is selected', () => {
-        render(<CPStatus multiple={true} />);
+        render(<CPStatus multiple={mockMultiple} />);
 
         const inputElement = screen.getByTestId('CPStatus-testid');
 
@@ -94,9 +102,16 @@ describe('CPStatus Component', () => {
             })
         );
 
-        render(<CPStatus multiple={true} />);
+        render(<CPStatus multiple={mockMultiple} />);
 
         // Ensure no options are rendered
         expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
+    });
+
+    it('displays the correct input value', () => {
+        render(<CPStatus multiple={mockMultiple} />);
+
+        // Assert that inputValueCPStatus is used correctly
+        expect(screen.getByDisplayValue(mockInputValueCPStatus)).toBeInTheDocument();
     });
 });
