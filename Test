@@ -1,0 +1,101 @@
+// CPStatus.test.js
+
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { useSelector } from 'react-redux';
+import CPStatus from './CPStatus';
+import { useDropDownSelection } from '../../../hooks/useDropDownSelection';
+import '@testing-library/jest-dom/extend-expect';
+
+// Mock useSelector from redux
+jest.mock('react-redux', () => ({
+    useSelector: jest.fn(),
+}));
+
+// Mock useDropDownSelection hook
+jest.mock('../../../hooks/useDropDownSelection', () => ({
+    useDropDownSelection: jest.fn(),
+}));
+
+describe('CPStatus Component', () => {
+    const mockCounterpartyStatus = {
+        value: [
+            { value: 'Option 1' },
+            { value: 'Option 2' },
+        ],
+    };
+
+    const mockOnInputChange = jest.fn();
+
+    beforeEach(() => {
+        // Mock useSelector to return counterpartyStatus
+        useSelector.mockImplementation((callback) =>
+            callback({
+                multiSearch: {
+                    dropDowns: {
+                        counterpartyStatus: mockCounterpartyStatus,
+                    },
+                },
+            })
+        );
+
+        // Mock useDropDownSelection to return onInputChange function
+        useDropDownSelection.mockReturnValue({
+            onInputChange: mockOnInputChange,
+        });
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('renders CPStatus component with multiple options', () => {
+        render(<CPStatus multiple={true} />);
+
+        // Assert the component renders correctly
+        expect(screen.getByTestId('CPStatus-testid')).toBeInTheDocument();
+        expect(screen.getByText('CPStatus / Category')).toBeInTheDocument();
+
+        // Assert the options are rendered correctly
+        mockCounterpartyStatus.value.forEach(option => {
+            expect(screen.getByText(option.value)).toBeInTheDocument();
+        });
+    });
+
+    it('calls onInputChange when option is selected', () => {
+        render(<CPStatus multiple={true} />);
+
+        const inputElement = screen.getByTestId('CPStatus-testid');
+
+        // Simulate selecting an option
+        fireEvent.change(inputElement, { target: { value: 'Option 1' } });
+
+        // Assert onInputChange has been called
+        expect(mockOnInputChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles single selection mode correctly', () => {
+        render(<CPStatus multiple={false} />);
+
+        // Assert that it still renders in single select mode
+        expect(screen.getByTestId('CPStatus-testid')).toBeInTheDocument();
+    });
+
+    it('handles empty counterpartyStatus correctly', () => {
+        // Mock useSelector to return empty counterpartyStatus
+        useSelector.mockImplementation((callback) =>
+            callback({
+                multiSearch: {
+                    dropDowns: {
+                        counterpartyStatus: { value: [] },
+                    },
+                },
+            })
+        );
+
+        render(<CPStatus multiple={true} />);
+
+        // Ensure no options are rendered
+        expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
+    });
+});
