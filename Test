@@ -1,64 +1,69 @@
 import axios from 'axios';
 import service from './path-to-service-file'; // adjust path as needed
 
-// Mock axios
-jest.mock('axios');
+jest.mock('axios', () => {
+  return {
+    create: jest.fn(() => ({
+      get: jest.fn(),
+      interceptors: {
+        request: {
+          use: jest.fn((fulfilled, rejected) => {
+            return { fulfilled, rejected };
+          }),
+          eject: jest.fn()
+        },
+        response: {
+          use: jest.fn((fulfilled, rejected) => {
+            return { fulfilled, rejected };
+          }),
+          eject: jest.fn()
+        }
+      }
+    }))
+  };
+});
 
 describe('Axios service', () => {
-    let axiosCreateMock;
-    let interceptors;
+  it('should create an axios instance with the correct base URL', () => {
+    expect(axios.create).toHaveBeenCalledWith({ baseURL: '$multiCpBaseUrl' });
+  });
 
-    beforeEach(() => {
-        interceptors = {
-            request: {
-                use: jest.fn()
-            },
-            response: {
-                use: jest.fn()
-            }
-        };
+  it('should add request and response interceptors to the service', () => {
+    const requestInterceptor = service.interceptors.request.use.mock.calls[0][0];
+    const responseInterceptor = service.interceptors.response.use.mock.calls[0][0];
 
-        axiosCreateMock = jest.fn().mockReturnValue({
-            interceptors
-        });
-        
-        axios.create = axiosCreateMock;
-    });
+    // Test request interceptor
+    expect(requestInterceptor).toBeInstanceOf(Function);
 
-    it('should create an axios instance with the correct base URL', () => {
-        expect(axiosCreateMock).toHaveBeenCalledWith({ baseURL: '$multiCpBaseUrl' });
-    });
+    // Test response interceptor
+    expect(responseInterceptor).toBeInstanceOf(Function);
+  });
 
-    it('should add request and response interceptors to the service', () => {
-        expect(interceptors.request.use).toHaveBeenCalled();
-        expect(interceptors.response.use).toHaveBeenCalled();
-    });
+  it('should return the config in the request interceptor', () => {
+    const config = { url: '/test' };
+    const requestInterceptor = service.interceptors.request.use.mock.calls[0][0];
+    const result = requestInterceptor(config);
+    expect(result).toBe(config);
+  });
 
-    it('should handle request interceptor correctly', () => {
-        const requestInterceptor = interceptors.request.use.mock.calls[0][0];
-        const config = { url: '/test' };
-        const result = requestInterceptor(config);
-        expect(result).toBe(config);
-    });
+  it('should return the response data in the response interceptor', async () => {
+    const response = { data: 'responseData' };
+    const responseInterceptor = service.interceptors.response.use.mock.calls[0][0];
+    const result = await responseInterceptor(response);
+    expect(result).toBe(response.data);
+  });
 
-    it('should handle response interceptor correctly', async () => {
-        const responseInterceptor = interceptors.response.use.mock.calls[0][0];
-        const response = { data: 'responseData' };
-        const result = await responseInterceptor(response);
-        expect(result).toBe(response.data);
-    });
+  it('should reject with error in the request interceptor if an error occurs', async () => {
+    const error = new Error('Request Error');
+    const requestInterceptor = service.interceptors.request.use.mock.calls[0][1];
+    const result = requestInterceptor(error);
+    await expect(result).rejects.toBe(error);
+  });
 
-    it('should handle request interceptor errors correctly', async () => {
-        const requestInterceptor = interceptors.request.use.mock.calls[0][1];
-        const error = new Error('Request Error');
-        const result = requestInterceptor(error);
-        await expect(result).rejects.toBe(error);
-    });
-
-    it('should handle response interceptor errors correctly', async () => {
-        const responseInterceptor = interceptors.response.use.mock.calls[0][1];
-        const error = new Error('Response Error');
-        const result = responseInterceptor(error);
-        await expect(result).rejects.toBe(error);
-    });
+  it('should reject with error in the response interceptor if an error occurs', async () => {
+    const error = new Error('Response Error');
+    const responseInterceptor = service.interceptors.response.use.mock.calls[0][1];
+    const result = responseInterceptor(error);
+    await expect(result).rejects.toBe(error);
+  });
 });
