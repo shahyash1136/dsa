@@ -12,20 +12,27 @@ jest.mock("./LicenseKey", () => ({
   setKey: jest.fn(),
 }));
 
+// Mock react-redux's Provider
+jest.mock('react-redux', () => ({
+  Provider: ({ children }) => <div>{children}</div>,
+}));
+
 describe("DashBoard Component", () => {
   let mockStore;
 
   beforeEach(() => {
     jest.clearAllMocks(); // Clear all mocks before each test
     
-    // Mock store object with asyncReducers and injectReducer
+    // Manually mock the store object with asyncReducers and injectReducer
     mockStore = {
       asyncReducers: {
         multiSearch: false,  // Default: Reducer not injected
       },
       injectReducer: jest.fn(),  // Mock injectReducer
-      getState: jest.fn(), // Mock getState function
-      dispatch: jest.fn(), // Mock dispatch function (if used)
+      getState: jest.fn(() => ({
+        asyncReducers: { multiSearch: false }, // Return initial asyncReducers state
+      })),
+      dispatch: jest.fn(), // Mock dispatch function (if needed)
       subscribe: jest.fn(), // Mock subscribe function (if needed)
     };
   });
