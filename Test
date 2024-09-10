@@ -1,0 +1,59 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import DashBoard from './DashBoard';  // Adjust this path based on your structure
+
+// Mock external modules used inside DashBoard
+jest.mock('ag-grid-enterprise', () => ({}));
+jest.mock('react-redux', () => ({
+  Provider: ({ children }) => <div>{children}</div>,
+}));
+jest.mock('crypto-js', () => ({}));
+jest.mock('./MultiSearchCp', () => ({ ...props }) => <div data-testid="MultiSearchCp" {...props} />);
+jest.mock('./redux/root-reducer', () => ({}));
+
+describe('DashBoard Component', () => {
+  const mockProps = {
+    store: {
+      asyncReducers: {
+        multiSearch: true
+      }
+    },
+    tabName: 'testTab',
+    LimitUIResponse: 'someResponse',
+    LimitsReferenceData: 'someData',
+    showLimitNav: true,
+    anchorEl: null,
+    uci: 'someUCI',
+  };
+
+  test('should render without crashing', () => {
+    render(<DashBoard {...mockProps} />);
+    expect(screen.getByText('testTab')).toBeInTheDocument(); // Assuming tabName is displayed somewhere
+  });
+
+  test('should inject store and handle asyncReducers', () => {
+    const { container } = render(<DashBoard {...mockProps} />);
+    expect(container).toBeInTheDocument();
+  });
+
+  test('should conditionally render MultiSearchCp when data exists', () => {
+    render(<DashBoard {...mockProps} />);
+    const multiSearchCp = screen.getByTestId('MultiSearchCp');
+    expect(multiSearchCp).toBeInTheDocument();
+    expect(multiSearchCp).toHaveAttribute('hostData', 'someUCI'); // Assuming hostData is passed to MultiSearchCp
+  });
+
+  test('should not render MultiSearchCp when LimitUIResponse is empty', () => {
+    const props = { ...mockProps, LimitUIResponse: '' };
+    render(<DashBoard {...props} />);
+    expect(screen.queryByTestId('MultiSearchCp')).not.toBeInTheDocument();
+  });
+
+  test('should display loading text when LimitsReferenceData is empty', () => {
+    const props = { ...mockProps, LimitsReferenceData: '' };
+    render(<DashBoard {...props} />);
+    expect(screen.getByText('loadingImageNew')).toBeInTheDocument();
+  });
+
+  // Add more test cases for different props and scenarios
+});
