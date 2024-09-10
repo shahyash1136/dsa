@@ -8,7 +8,7 @@ jest.mock('react-redux', () => ({
   Provider: ({ children }) => <div>{children}</div>,
 }));
 
-// Properly mock CryptoJS, especially utf8 encoding/decoding
+// Properly mock CryptoJS, especially decrypt and utf8 encoding/decoding
 jest.mock('crypto-js', () => ({
   enc: {
     Utf8: {
