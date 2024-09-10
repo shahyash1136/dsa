@@ -1,25 +1,28 @@
 import React from "react";
-import { render, screen, cleanup, act } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import '@testing-library/jest-dom/extend-expect';
 import DashBoard from "./DashBoard";
 
-jest.mock("react-redux", () => ({
-  Provider: ({ children }) => <div>{children}</div>,
-}));
-
+// Mocking necessary imports
+jest.mock("crypto-js", () => ({ AES: { encrypt: jest.fn() } }));
+jest.mock("ag-grid-enterprise", () => ({ LicenseManager: jest.fn() }));
 jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp Component</div>);
+jest.mock("./LicenseKey", () => ({
+  text: "mockText",
+  setKey: jest.fn(),
+}));
 
 describe("DashBoard Component", () => {
   let mockStore;
 
   beforeEach(() => {
-    jest.resetAllMocks(); // Reset mocks to clean state before each test
-    // Default mock setup for most tests
+    jest.clearAllMocks(); // Clear all mocks before each test
+    // Mock store object with asyncReducers and injectReducer
     mockStore = {
       asyncReducers: {
-        multiSearch: true,
+        multiSearch: false,  // default to reducer not injected
       },
-      injectReducer: jest.fn(),  // Default mock for injectReducer
+      injectReducer: jest.fn(),  // Mock injectReducer
     };
   });
 
@@ -29,45 +32,48 @@ describe("DashBoard Component", () => {
 
   afterEach(cleanup);
 
-  test("should render loading state initially", () => {
+  test("should display loading state initially", () => {
     render(<DashBoard {...defaultProps} />);
+    
+    // Expect the loading state to be rendered initially
     expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
   });
 
-  // Three test cases where data is loaded and custom mock behavior is needed
-  test("should handle data loaded state 1", () => {
-    // Custom behavior for this test
-    mockStore.injectReducer = jest.fn(() => {
-      mockStore.isStoreInjectCompleted = true; // Simulate store injection complete
-    });
-
+  test("should inject the reducer when store is provided", () => {
     render(<DashBoard {...defaultProps} />);
-    expect(mockStore.injectReducer).toHaveBeenCalled();
-    // Your assertions here
+    
+    // Ensure injectReducer is called with the correct arguments
+    expect(mockStore.injectReducer).toHaveBeenCalledWith("multiSearch", expect.anything());
   });
 
-  test("should handle data loaded state 2", () => {
-    // Similar setup as above or different as needed
-    mockStore.injectReducer = jest.fn(() => {
-      mockStore.isStoreInjectCompleted = true; // Adjust mock implementation
-    });
+  test("should display MultiSearchCp component when reducer is injected", () => {
+    // Simulate that the reducer is injected into the store
+    mockStore.asyncReducers.multiSearch = true;
 
     render(<DashBoard {...defaultProps} />);
-    // Your assertions here
+
+    // Ensure that the MultiSearchCp component is rendered
+    expect(screen.getByTestId("multi-search-cp")).toBeInTheDocument();
   });
 
-  test("should handle data loaded state 3", () => {
-    // Setup custom mock for this test
-    mockStore.injectReducer = jest.fn(() => {
-      mockStore.isStoreInjectCompleted = true; // Adjust mock implementation
-    });
-
+  test("should call setKey with correct arguments", () => {
     render(<DashBoard {...defaultProps} />);
-    // Your assertions here
+
+    const { text, setKey } = require("./LicenseKey");
+    const LicenseManager = require("ag-grid-enterprise");
+
+    // Ensure setKey is called with expected parameters
+    expect(setKey).toHaveBeenCalledWith(text, LicenseManager, expect.anything());
   });
 
-  test("some other test", () => {
+  test("should not render MultiSearchCp if store.asyncReducers.multiSearch is false", () => {
+    // Set asyncReducers.multiSearch to false to simulate no reducer injected
+    mockStore.asyncReducers.multiSearch = false;
+
     render(<DashBoard {...defaultProps} />);
-    // Assertions for a standard scenario
+
+    // Ensure the MultiSearchCp is not rendered and loading is shown
+    expect(screen.queryByTestId("multi-search-cp")).not.toBeInTheDocument();
+    expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
   });
 });
