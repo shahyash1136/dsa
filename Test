@@ -1,52 +1,40 @@
-// getDropDown.test.js
-import { getDropDown } from './getDropDown';
-import service from './api-service';
-import config from './config';
+// TextInput.test.js
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import TextInput from './TextInput';
 
-// Mock the service module
-jest.mock('./api-service', () => jest.fn());
-
-describe('getDropDown', () => {
-  beforeEach(() => {
-    // Clear all instances and calls to the mock function
-    service.mockClear();
+describe('TextInput Component', () => {
+  test('renders with the correct label', () => {
+    render(<TextInput label="Test Label" />);
+    expect(screen.getByText('Test Label')).toBeInTheDocument();
   });
 
-  test('should call service with correct parameters', async () => {
-    const mockData = { key: 'value' };
-    const mockResponse = { data: 'mockData' };
-
-    // Set up the mock implementation for the service
-    service.mockResolvedValueOnce(mockResponse);
-
-    const result = await getDropDown(mockData);
-
-    expect(service).toHaveBeenCalledTimes(1);
-    expect(service).toHaveBeenCalledWith({
-      url: config.API_NAMES.dropdownData,
-      method: 'POST',
-      data: mockData,
-    });
-    expect(result).toEqual(mockResponse);
+  test('updates input value on change', () => {
+    render(<TextInput label="Test Label" />);
+    const input = screen.getByPlaceholderText('Enter comma-separeted values');
+    
+    fireEvent.change(input, { target: { value: 'test1,test2' } });
+    expect(input.value).toBe('test1,test2');
   });
 
-  test('should handle service errors', async () => {
-    const mockData = { key: 'value' };
-    const mockError = new Error('Service error');
+  test('updates valuesArray on change', () => {
+    // Mock console.log to test valuesArray without actual console output
+    console.log = jest.fn();
+    
+    render(<TextInput label="Test Label" />);
+    const input = screen.getByPlaceholderText('Enter comma-separeted values');
+    
+    fireEvent.change(input, { target: { value: 'test1,test2' } });
+    expect(console.log).toHaveBeenCalledWith(['test1', 'test2']);
+  });
 
-    // Set up the mock implementation for the service to reject with an error
-    service.mockRejectedValueOnce(mockError);
-
-    try {
-      await getDropDown(mockData);
-    } catch (error) {
-      expect(service).toHaveBeenCalledTimes(1);
-      expect(service).toHaveBeenCalledWith({
-        url: config.API_NAMES.dropdownData,
-        method: 'POST',
-        data: mockData,
-      });
-      expect(error).toBe(mockError);
-    }
+  test('trims trailing commas on blur', () => {
+    render(<TextInput label="Test Label" />);
+    const input = screen.getByPlaceholderText('Enter comma-separeted values');
+    
+    fireEvent.change(input, { target: { value: 'test1,test2,' } });
+    fireEvent.blur(input);
+    expect(input.value).toBe('test1,test2');
   });
 });
