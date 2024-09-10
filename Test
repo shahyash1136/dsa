@@ -17,12 +17,16 @@ describe("DashBoard Component", () => {
 
   beforeEach(() => {
     jest.clearAllMocks(); // Clear all mocks before each test
+    
     // Mock store object with asyncReducers and injectReducer
     mockStore = {
       asyncReducers: {
-        multiSearch: false,  // default to reducer not injected
+        multiSearch: false,  // Default: Reducer not injected
       },
       injectReducer: jest.fn(),  // Mock injectReducer
+      getState: jest.fn(), // Mock getState function
+      dispatch: jest.fn(), // Mock dispatch function (if used)
+      subscribe: jest.fn(), // Mock subscribe function (if needed)
     };
   });
 
