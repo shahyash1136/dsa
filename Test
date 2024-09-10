@@ -12,9 +12,13 @@ jest.mock("./LicenseKey", () => ({
   setKey: jest.fn(),
 }));
 
-// Mock react-redux's Provider
+// Mock react-redux's Provider to pass down the store
 jest.mock('react-redux', () => ({
-  Provider: ({ children }) => <div>{children}</div>,
+  Provider: ({ store, children }) => (
+    <div data-testid="mock-provider" data-store={JSON.stringify(store)}>
+      {children}
+    </div>
+  ),
 }));
 
 describe("DashBoard Component", () => {
