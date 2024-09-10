@@ -3,7 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import '@testing-library/jest-dom/extend-expect';
 import DashBoard from "./DashBoard";
 
-// Mocking necessary imports
+// Mock necessary imports
 jest.mock("crypto-js", () => ({ AES: { encrypt: jest.fn() } }));
 jest.mock("ag-grid-enterprise", () => ({ LicenseManager: jest.fn() }));
 jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp Component</div>);
