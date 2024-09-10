@@ -1,94 +1,52 @@
-import React from "react";
-import { render, screen, cleanup } from "@testing-library/react";
-import '@testing-library/jest-dom/extend-expect';
-import DashBoard from "./DashBoard";
+// getDropDown.test.js
+import { getDropDown } from './getDropDown';
+import service from './api-service';
+import config from './config';
 
-// Mock necessary imports
-jest.mock("crypto-js", () => ({ AES: { encrypt: jest.fn() } }));
-jest.mock("ag-grid-enterprise", () => ({ LicenseManager: jest.fn() }));
-jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp Component</div>);
-jest.mock("./LicenseKey", () => ({
-  text: "mockText",
-  setKey: jest.fn(),
-}));
+// Mock the service module
+jest.mock('./api-service', () => jest.fn());
 
-// Mock react-redux's Provider to pass down the store
-jest.mock('react-redux', () => ({
-  Provider: ({ store, children }) => (
-    <div data-testid="mock-provider" data-store={JSON.stringify(store)}>
-      {children}
-    </div>
-  ),
-}));
-
-describe("DashBoard Component", () => {
-  let mockStore;
-
+describe('getDropDown', () => {
   beforeEach(() => {
-    jest.clearAllMocks(); // Clear all mocks before each test
-    
-    // Manually mock the store object with asyncReducers and injectReducer
-    mockStore = {
-      asyncReducers: {
-        multiSearch: false,  // Default: Reducer not injected
-      },
-      injectReducer: jest.fn(),  // Mock injectReducer
-      getState: jest.fn(() => ({
-        asyncReducers: { multiSearch: false }, // Return initial asyncReducers state
-      })),
-      dispatch: jest.fn(), // Mock dispatch function (if needed)
-      subscribe: jest.fn(), // Mock subscribe function (if needed)
-    };
+    // Clear all instances and calls to the mock function
+    service.mockClear();
   });
 
-  const defaultProps = {
-    store: mockStore,
-  };
+  test('should call service with correct parameters', async () => {
+    const mockData = { key: 'value' };
+    const mockResponse = { data: 'mockData' };
 
-  afterEach(cleanup);
+    // Set up the mock implementation for the service
+    service.mockResolvedValueOnce(mockResponse);
 
-  test("should display loading state initially", () => {
-    render(<DashBoard {...defaultProps} />);
-    
-    // Expect the loading state to be rendered initially
-    expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
+    const result = await getDropDown(mockData);
+
+    expect(service).toHaveBeenCalledTimes(1);
+    expect(service).toHaveBeenCalledWith({
+      url: config.API_NAMES.dropdownData,
+      method: 'POST',
+      data: mockData,
+    });
+    expect(result).toEqual(mockResponse);
   });
 
-  test("should inject the reducer when store is provided", () => {
-    render(<DashBoard {...defaultProps} />);
-    
-    // Ensure injectReducer is called with the correct arguments
-    expect(mockStore.injectReducer).toHaveBeenCalledWith("multiSearch", expect.anything());
-  });
+  test('should handle service errors', async () => {
+    const mockData = { key: 'value' };
+    const mockError = new Error('Service error');
 
-  test("should display MultiSearchCp component when reducer is injected", () => {
-    // Simulate that the reducer is injected into the store
-    mockStore.asyncReducers.multiSearch = true;
+    // Set up the mock implementation for the service to reject with an error
+    service.mockRejectedValueOnce(mockError);
 
-    render(<DashBoard {...defaultProps} />);
-
-    // Ensure that the MultiSearchCp component is rendered
-    expect(screen.getByTestId("multi-search-cp")).toBeInTheDocument();
-  });
-
-  test("should call setKey with correct arguments", () => {
-    render(<DashBoard {...defaultProps} />);
-
-    const { text, setKey } = require("./LicenseKey");
-    const LicenseManager = require("ag-grid-enterprise");
-
-    // Ensure setKey is called with expected parameters
-    expect(setKey).toHaveBeenCalledWith(text, LicenseManager, expect.anything());
-  });
-
-  test("should not render MultiSearchCp if store.asyncReducers.multiSearch is false", () => {
-    // Set asyncReducers.multiSearch to false to simulate no reducer injected
-    mockStore.asyncReducers.multiSearch = false;
-
-    render(<DashBoard {...defaultProps} />);
-
-    // Ensure the MultiSearchCp is not rendered and loading is shown
-    expect(screen.queryByTestId("multi-search-cp")).not.toBeInTheDocument();
-    expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
+    try {
+      await getDropDown(mockData);
+    } catch (error) {
+      expect(service).toHaveBeenCalledTimes(1);
+      expect(service).toHaveBeenCalledWith({
+        url: config.API_NAMES.dropdownData,
+        method: 'POST',
+        data: mockData,
+      });
+      expect(error).toBe(mockError);
+    }
   });
 });
