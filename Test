@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import DashBoard from './DashBoard';  // Adjust this path based on your structure
 
 // Mock external modules used inside DashBoard
@@ -7,17 +7,36 @@ jest.mock('ag-grid-enterprise', () => ({}));
 jest.mock('react-redux', () => ({
   Provider: ({ children }) => <div>{children}</div>,
 }));
-jest.mock('crypto-js', () => ({}));
+
+// Properly mock CryptoJS, especially utf8 encoding/decoding
+jest.mock('crypto-js', () => ({
+  enc: {
+    Utf8: {
+      parse: jest.fn().mockReturnValue('parsedUtf8'),
+      stringify: jest.fn().mockReturnValue('stringifiedUtf8'),
+    },
+  },
+  AES: {
+    encrypt: jest.fn().mockReturnValue('encryptedValue'),
+    decrypt: jest.fn().mockReturnValue({
+      toString: jest.fn().mockReturnValue('decryptedValue'),
+    }),
+  },
+}));
+
 jest.mock('./MultiSearchCp', () => ({ ...props }) => <div data-testid="MultiSearchCp" {...props} />);
 jest.mock('./redux/root-reducer', () => ({}));
 
 describe('DashBoard Component', () => {
-  const mockProps = {
-    store: {
-      asyncReducers: {
-        multiSearch: true
-      }
+  const mockStore = {
+    asyncReducers: {
+      multiSearch: true,
     },
+    injectReducer: jest.fn(),  // Mocking injectReducer
+  };
+
+  const mockProps = {
+    store: mockStore,
     tabName: 'testTab',
     LimitUIResponse: 'someResponse',
     LimitsReferenceData: 'someData',
@@ -31,9 +50,9 @@ describe('DashBoard Component', () => {
     expect(screen.getByText('testTab')).toBeInTheDocument(); // Assuming tabName is displayed somewhere
   });
 
-  test('should inject store and handle asyncReducers', () => {
-    const { container } = render(<DashBoard {...mockProps} />);
-    expect(container).toBeInTheDocument();
+  test('should call injectReducer on store', () => {
+    render(<DashBoard {...mockProps} />);
+    expect(mockStore.injectReducer).toHaveBeenCalledWith('multiSearch', expect.any(Function));
   });
 
   test('should conditionally render MultiSearchCp when data exists', () => {
@@ -54,6 +73,4 @@ describe('DashBoard Component', () => {
     render(<DashBoard {...props} />);
     expect(screen.getByText('loadingImageNew')).toBeInTheDocument();
   });
-
-  // Add more test cases for different props and scenarios
 });
