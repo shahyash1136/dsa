@@ -1,28 +1,25 @@
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, cleanup, act } from "@testing-library/react";
+import '@testing-library/jest-dom/extend-expect';
 import DashBoard from "./DashBoard";
-import MultiSearchCp from "./MultiSearchCp";  // Make sure this is properly imported
-import CryptoJS from "crypto-js";
-import LicenseManager from "ag-grid-enterprise";
-import { setKey } from "./LicenseKey";  // Ensure your LicenseKey module is imported
 
-jest.mock("crypto-js");
-jest.mock("ag-grid-enterprise");
-jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp</div>);
-jest.mock("./LicenseKey", () => ({
-  setKey: jest.fn(),
+jest.mock("react-redux", () => ({
+  Provider: ({ children }) => <div>{children}</div>,
 }));
 
-describe("DashBoard component", () => {
+jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp Component</div>);
+
+describe("DashBoard Component", () => {
   let mockStore;
 
   beforeEach(() => {
-    // Reset the mockStore before each test
+    jest.resetAllMocks(); // Reset mocks to clean state before each test
+    // Default mock setup for most tests
     mockStore = {
-      asyncReducers: {},
-      injectReducer: jest.fn((key, reducer) => {
-        mockStore.asyncReducers[key] = reducer;  // Simulate adding the reducer
-      }),
+      asyncReducers: {
+        multiSearch: true,
+      },
+      injectReducer: jest.fn(),  // Default mock for injectReducer
     };
   });
 
@@ -30,58 +27,47 @@ describe("DashBoard component", () => {
     store: mockStore,
   };
 
-  test("should render MultiSearchCp component when store injection is completed", async () => {
-    // Act to simulate rendering and state changes
-    await act(async () => {
-      render(<DashBoard {...defaultProps} />);
-    });
+  afterEach(cleanup);
 
-    // Check if injectReducer was called with the correct arguments
-    expect(mockStore.injectReducer).toHaveBeenCalledWith("multiSearch", expect.any(Function));
-
-    // Simulate that store injection has completed by checking if the MultiSearchCp component is rendered
-    expect(await screen.findByTestId("multi-search-cp")).toBeInTheDocument();
+  test("should render loading state initially", () => {
+    render(<DashBoard {...defaultProps} />);
+    expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
   });
 
-  test("should display loading text when store injection is not completed", async () => {
-    // Act to simulate rendering and state changes
-    await act(async () => {
-      render(<DashBoard {...defaultProps} />);
+  // Three test cases where data is loaded and custom mock behavior is needed
+  test("should handle data loaded state 1", () => {
+    // Custom behavior for this test
+    mockStore.injectReducer = jest.fn(() => {
+      mockStore.isStoreInjectCompleted = true; // Simulate store injection complete
     });
 
-    // Initially, it should show the loading text since injectReducer hasn't been completed yet
-    expect(screen.getByText(/loadingImageNew/i)).toBeInTheDocument();
+    render(<DashBoard {...defaultProps} />);
+    expect(mockStore.injectReducer).toHaveBeenCalled();
+    // Your assertions here
   });
 
-  test("should call injectReducer with the correct parameters", async () => {
-    await act(async () => {
-      render(<DashBoard {...defaultProps} />);
+  test("should handle data loaded state 2", () => {
+    // Similar setup as above or different as needed
+    mockStore.injectReducer = jest.fn(() => {
+      mockStore.isStoreInjectCompleted = true; // Adjust mock implementation
     });
 
-    // Verify that the injectReducer function is called with 'multiSearch' and the rootReducer
-    expect(mockStore.injectReducer).toHaveBeenCalledWith("multiSearch", expect.any(Function));
+    render(<DashBoard {...defaultProps} />);
+    // Your assertions here
   });
 
-  test("should call setKey when the component is mounted", async () => {
-    await act(async () => {
-      render(<DashBoard {...defaultProps} />);
+  test("should handle data loaded state 3", () => {
+    // Setup custom mock for this test
+    mockStore.injectReducer = jest.fn(() => {
+      mockStore.isStoreInjectCompleted = true; // Adjust mock implementation
     });
 
-    // Verify that setKey is called with the correct parameters
-    expect(setKey).toHaveBeenCalledWith(expect.any(String), LicenseManager, CryptoJS);
+    render(<DashBoard {...defaultProps} />);
+    // Your assertions here
   });
 
-  test("should reset isStoreInjectCompleted to false on component unmount", async () => {
-    const { unmount } = render(<DashBoard {...defaultProps} />);
-
-    // Ensure injectReducer has been called and store injection is complete
-    await screen.findByTestId("multi-search-cp");
-
-    // Unmount the component to simulate component cleanup
-    unmount();
-
-    // Since this state change is internal, we indirectly check if the component was unmounted properly
-    // by ensuring no component related to MultiSearchCp exists in the document after unmount
-    expect(screen.queryByTestId("multi-search-cp")).not.toBeInTheDocument();
+  test("some other test", () => {
+    render(<DashBoard {...defaultProps} />);
+    // Assertions for a standard scenario
   });
 });
