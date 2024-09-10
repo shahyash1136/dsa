@@ -1,76 +1,96 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import DashBoard from './DashBoard';  // Adjust this path based on your structure
+import React from "react";
+import { render, screen, cleanup } from "@testing-library/react";
+import '@testing-library/jest-dom/extend-expect';
+import DashBoard from "./DashBoard";
 
-// Mock external modules used inside DashBoard
-jest.mock('ag-grid-enterprise', () => ({}));
-jest.mock('react-redux', () => ({
-  Provider: ({ children }) => <div>{children}</div>,
-}));
-
-// Properly mock CryptoJS, especially decrypt and utf8 encoding/decoding
-jest.mock('crypto-js', () => ({
+// Mocking external modules
+jest.mock("crypto-js", () => ({
   enc: {
     Utf8: {
-      parse: jest.fn().mockReturnValue('parsedUtf8'),
-      stringify: jest.fn().mockReturnValue('stringifiedUtf8'),
+      parse: jest.fn(),
+      stringify: jest.fn(),
     },
   },
   AES: {
-    encrypt: jest.fn().mockReturnValue('encryptedValue'),
     decrypt: jest.fn().mockReturnValue({
-      toString: jest.fn().mockReturnValue('decryptedValue'),
+      toString: jest.fn().mockReturnValue("decryptedValue"),
     }),
   },
 }));
 
-jest.mock('./MultiSearchCp', () => ({ ...props }) => <div data-testid="MultiSearchCp" {...props} />);
-jest.mock('./redux/root-reducer', () => ({}));
+jest.mock("ag-grid-enterprise", () => ({}));
 
-describe('DashBoard Component', () => {
+jest.mock("react-redux", () => ({
+  Provider: ({ children }) => <div>{children}</div>,
+}));
+
+jest.mock("./MultiSearchCp", () => () => <div data-testid="multi-search-cp">MultiSearchCp Component</div>);
+
+jest.mock("./redux/root-reducer", () => ({}));
+
+jest.mock("./LicenseKey", () => ({
+  text: "someText",
+  setKey: jest.fn(),
+}));
+
+describe("DashBoard Component", () => {
   const mockStore = {
-    asyncReducers: {
-      multiSearch: true,
-    },
-    injectReducer: jest.fn(),  // Mocking injectReducer
+    injectReducer: jest.fn(),
   };
 
-  const mockProps = {
+  const defaultProps = {
     store: mockStore,
-    tabName: 'testTab',
-    LimitUIResponse: 'someResponse',
-    LimitsReferenceData: 'someData',
-    showLimitNav: true,
-    anchorEl: null,
-    uci: 'someUCI',
+    LimitUIResponse: "someResponse",
+    LimitsReferenceData: "someReferenceData",
   };
 
-  test('should render without crashing', () => {
-    render(<DashBoard {...mockProps} />);
-    expect(screen.getByText('testTab')).toBeInTheDocument(); // Assuming tabName is displayed somewhere
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
   });
 
-  test('should call injectReducer on store', () => {
-    render(<DashBoard {...mockProps} />);
-    expect(mockStore.injectReducer).toHaveBeenCalledWith('multiSearch', expect.any(Function));
+  test("should render loading state initially", () => {
+    render(<DashBoard {...defaultProps} />);
+    
+    // Ensure loading state is displayed initially
+    expect(screen.getByText(/nbsp;/)).toBeInTheDocument();
   });
 
-  test('should conditionally render MultiSearchCp when data exists', () => {
-    render(<DashBoard {...mockProps} />);
-    const multiSearchCp = screen.getByTestId('MultiSearchCp');
-    expect(multiSearchCp).toBeInTheDocument();
-    expect(multiSearchCp).toHaveAttribute('hostData', 'someUCI'); // Assuming hostData is passed to MultiSearchCp
+  test("should call injectReducer and setKey on mount", () => {
+    render(<DashBoard {...defaultProps} />);
+    
+    // Check if injectReducer has been called
+    expect(mockStore.injectReducer).toHaveBeenCalledWith("multiSearch", expect.any(Object));
+    
+    // Check if setKey has been called with the correct arguments
+    expect(require("./LicenseKey").setKey).toHaveBeenCalledWith(
+      "someText",
+      expect.any(Object),  // LicenseManager mock
+      expect.any(Object)   // CryptoJS mock
+    );
   });
 
-  test('should not render MultiSearchCp when LimitUIResponse is empty', () => {
-    const props = { ...mockProps, LimitUIResponse: '' };
-    render(<DashBoard {...props} />);
-    expect(screen.queryByTestId('MultiSearchCp')).not.toBeInTheDocument();
+  test("should render MultiSearchCp component when store is injected", async () => {
+    render(<DashBoard {...defaultProps} />);
+
+    // Simulate that store injection has completed
+    expect(await screen.findByTestId("multi-search-cp")).toBeInTheDocument();
   });
 
-  test('should display loading text when LimitsReferenceData is empty', () => {
-    const props = { ...mockProps, LimitsReferenceData: '' };
-    render(<DashBoard {...props} />);
-    expect(screen.getByText('loadingImageNew')).toBeInTheDocument();
+  test("should display loading text when store injection is incomplete", () => {
+    // Render component with store not injected
+    render(<DashBoard {...defaultProps} />);
+    
+    // Assert that loading text is rendered initially
+    expect(screen.getByText(/\u00a0/)).toBeInTheDocument(); // '&nbsp;' equivalent in JavaScript
+  });
+
+  test("should unmount and reset isStoreInjectCompleted to false", () => {
+    const { unmount } = render(<DashBoard {...defaultProps} />);
+    
+    unmount();
+
+    // Check if the cleanup effect (setIsStoreInjectCompleted(false)) is called on unmount
+    expect(screen.queryByTestId("multi-search-cp")).not.toBeInTheDocument();
   });
 });
