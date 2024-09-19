@@ -1,0 +1,101 @@
+import React from "react";
+import { render, fireEvent, screen } from "@testing-library/react";
+import SearchBar from "./SearchBar"; // Adjust the path based on your file structure
+import { Autocomplete, Checkbox, CircularProgress } from "@mui/material";
+import { Search } from "@mui/icons-material";
+
+// Mock necessary utilities and components
+jest.mock("../../../common/utils", () => ({
+  getHighlightedText: jest.fn((text) => text),
+  formatedDataTestId: jest.fn((text) => `formatted-${text}`),
+}));
+
+describe("SearchBar Component", () => {
+  const handleSelectionChange = jest.fn();
+  const handleInputChange = jest.fn();
+  const defaultSuggestions = ["Option 1", "Option 2"];
+  const defaultProps = {
+    handleSelectionChange,
+    handleInputChange,
+    suggestions: defaultSuggestions,
+    multiple: true,
+    selecetedValues: [],
+    searchTerm: "Option",
+    label: "Search Label",
+    placeholder: "Search here...",
+    loading: false,
+  };
+
+  const renderComponent = (props = {}) =>
+    render(<SearchBar {...defaultProps} {...props} />);
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("renders with default props", () => {
+    renderComponent();
+    expect(screen.getByLabelText(/search label/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search here/i)).toBeInTheDocument();
+    expect(screen.getByTestId("formatted-Search here...")).toBeInTheDocument();
+  });
+
+  test("calls handleInputChange when typing in the search field", () => {
+    renderComponent();
+    const input = screen.getByPlaceholderText(/search here/i);
+    fireEvent.change(input, { target: { value: "new value" } });
+    expect(handleInputChange).toHaveBeenCalledWith(expect.any(Object));
+  });
+
+  test("renders options and calls handleSelectionChange on selection", () => {
+    renderComponent();
+    const input = screen.getByPlaceholderText(/search here/i);
+    fireEvent.click(input);
+
+    const option = screen.getByText(/Option 1/i);
+    fireEvent.click(option);
+    expect(handleSelectionChange).toHaveBeenCalledWith(
+      expect.any(Object),
+      defaultSuggestions[0],
+      expect.anything()
+    );
+  });
+
+  test("displays loading indicator when loading is true", () => {
+    renderComponent({ loading: true });
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.queryByTestId("Search")).not.toBeInTheDocument();
+  });
+
+  test("renders checkboxes for multiple selections", () => {
+    renderComponent();
+    const input = screen.getByPlaceholderText(/search here/i);
+    fireEvent.click(input);
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes.length).toBe(2); // Based on defaultSuggestions
+  });
+
+  test("renders chips when multiple is true", () => {
+    const selectedValues = ["Option 1", "Option 2"];
+    renderComponent({ selecetedValues: selectedValues });
+
+    selectedValues.forEach((value) => {
+      expect(screen.getByText(value)).toBeInTheDocument();
+    });
+  });
+
+  test("limits tags when limit is true", () => {
+    const selectedValues = ["Option 1", "Option 2", "Option 3"];
+    renderComponent({ selecetedValues: selectedValues, limit: true });
+
+    expect(screen.getAllByRole("button").length).toBe(2); // Since limit is 2
+  });
+
+  test("renders without crashing when no suggestions", () => {
+    renderComponent({ suggestions: [] });
+    const input = screen.getByPlaceholderText(/search here/i);
+    fireEvent.click(input);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+});
