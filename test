@@ -80,8 +80,9 @@ describe("useSearchSuggestion", () => {
   });
 
   test("should handle selection change and dispatch action", () => {
+    const mockAction = jest.fn();
     const { result } = renderHook(() =>
-      useSearchSuggestion(callbackFn, true, "suggestions", [])
+      useSearchSuggestion(callbackFn, true, "suggestions", mockAction, [])
     );
 
     const newSelection = [{ id: 1, label: "Selected Item" }];
@@ -91,21 +92,23 @@ describe("useSearchSuggestion", () => {
     });
 
     expect(result.current.selectedValues).toEqual(newSelection);
-    expect(dispatch).toHaveBeenCalledWith(expect.any(Function)); // Check if action is dispatched
+    expect(dispatch).toHaveBeenCalledWith(mockAction(newSelection));
   });
 
-  test("should handle single select and reset selected values", () => {
-    const { result } = renderHook(() =>
-      useSearchSuggestion(callbackFn, false, "suggestions", [])
+  test("should handle single select and reset selected values", async () => {
+    const mockAction = jest.fn();
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useSearchSuggestion(callbackFn, false, "suggestions", mockAction, [])
     );
 
-    // Simulate input change and selection
+    // Simulate input change
     act(() => {
       result.current.handleInputChange({ target: { value: "item" } });
     });
 
     expect(result.current.loading).toBe(true);
 
+    // Simulate selection
     act(() => {
       result.current.handleSelectionChange(null, "Item 1");
     });
@@ -116,6 +119,9 @@ describe("useSearchSuggestion", () => {
     act(() => {
       result.current.handleInputChange({ target: { value: "" } });
     });
+
+    // Wait for state updates and effects to be processed
+    await waitForNextUpdate();
 
     expect(result.current.selectedValues).toBeNull();
   });
@@ -151,7 +157,7 @@ describe("useSearchSuggestion", () => {
     await waitForNextUpdate();
 
     expect(callbackFn).toHaveBeenCalled();
-    expect(result.current.suggestionList).toEqual([]); // Suggestions cleared on error
+    expect(result.current.suggestionList).toEqual([]);
     expect(result.current.loading).toBe(false);
   });
 });
