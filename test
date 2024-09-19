@@ -1,81 +1,157 @@
-import React, { useState, useCallback, useEffect } from "react";
+import { renderHook, act } from "@testing-library/react-hooks";
+import useSearchSuggestion from "./useSearchSuggestion";
 import useDebounce from "./useDebounce";
+import { useDispatch } from "react-redux";
 
-const useSearchSuggestion = (callbackFn, multiple, initialSuggestions = []) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [suggestionList, setSuggestionList] = useState(initialSuggestions);
-  const debounceValue = useDebounce(searchQuery, 1000);
-  const [selectedValues, setSelectedValues] = useState(multiple ? [] : null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isSelecting, setIsSelecting] = useState(false);
+// Mock useDebounce
+jest.mock("./useDebounce");
+jest.mock("react-redux", () => ({
+  useDispatch: jest.fn(),
+}));
 
-  // Fetch suggestions based on debounced value
-  const fetchSuggestion = useCallback(async () => {
-    if (!debounceValue) return;  // Prevent fetch if query is empty
-    setLoading(true);
-    
-    try {
-      const res = await callbackFn({ query: debounceValue });
-      setSuggestionList(res);
-    } catch (err) {
-      console.error("Error fetching suggestions:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [debounceValue, callbackFn]);
+describe("useSearchSuggestion", () => {
+  let callbackFn;
+  let dispatch;
 
-  // Effect to trigger suggestion fetching when debounceValue changes
-  useEffect(() => {
-    if (debounceValue) {
-      fetchSuggestion();
-    } else {
-      setSuggestionList([]);  // Clear suggestions if the input is empty
-    }
-  }, [debounceValue, fetchSuggestion]);
+  beforeEach(() => {
+    callbackFn = jest.fn();
+    useDebounce.mockImplementation((value) => value); // Directly return searchQuery for simplicity
+    dispatch = jest.fn();
+    useDispatch.mockReturnValue(dispatch);
+  });
 
-  // Handle the selection change
-  const handleSelectionChange = useCallback(
-    (event, newValue) => {
-      setIsSelecting(true);
-      setSelectedValues(newValue);
-      setTimeout(() => setIsSelecting(false), 0);
-    },
-    [multiple]
-  );
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-  // Handle input change
-  const handleInputChange = useCallback(
-    (event) => {
-      const newQuery = event.target.value;
-      setSearchTerm(newQuery);
+  test("should initialize with default values", () => {
+    const { result } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
+    const {
+      suggestionList,
+      loading,
+      selectedValues,
+      searchTerm,
+    } = result.current;
 
-      if (!isSelecting) {
-        setSearchQuery(newQuery);  // Set search query to trigger debounce
+    expect(suggestionList).toEqual([]);
+    expect(loading).toBe(false);
+    expect(selectedValues).toEqual([]);
+    expect(searchTerm).toBe("");
+  });
 
-        if (newQuery === "") {
-          setLoading(false);
-          setSuggestionList([]);  // Clear suggestions when input is empty
-        } else {
-          setLoading(true);  // Start loading when there's a new query
-        }
+  test("should set searchQuery, trigger debounce, and fetch suggestions", async () => {
+    const mockResponse = { suggestions: [{ id: 1, label: "Item 1" }] };
+    callbackFn.mockResolvedValueOnce(mockResponse);
 
-        if (!multiple) {
-          setSelectedValues(null);  // Reset selected values for single-select
-        }
-      }
-    },
-    [isSelecting, multiple]
-  );
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
 
-  return {
-    suggestionList,
-    loading,
-    selectedValues,
-    searchTerm,
-    handleSelectionChange,
-    handleInputChange,
-  };
-};
+    // Simulate typing in search input
+    act(() => {
+      result.current.handleInputChange({ target: { value: "test" } });
+    });
 
-export default useSearchSuggestion;
+    expect(result.current.searchTerm).toBe("test");
+    expect(result.current.loading).toBe(true);
+
+    // Wait for the async API call
+    await waitForNextUpdate();
+
+    expect(callbackFn).toHaveBeenCalledWith({ query: "test" });
+    expect(result.current.suggestionList).toEqual(mockResponse.suggestions);
+    expect(result.current.loading).toBe(false);
+  });
+
+  test("should clear suggestions when input is empty", async () => {
+    const { result } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
+
+    // Simulate clearing input
+    act(() => {
+      result.current.handleInputChange({ target: { value: "" } });
+    });
+
+    expect(result.current.suggestionList).toEqual([]);
+    expect(result.current.loading).toBe(false);
+  });
+
+  test("should handle selection change and dispatch action", () => {
+    const { result } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
+
+    const newSelection = [{ id: 1, label: "Selected Item" }];
+
+    act(() => {
+      result.current.handleSelectionChange(null, newSelection);
+    });
+
+    expect(result.current.selectedValues).toEqual(newSelection);
+    expect(dispatch).toHaveBeenCalledWith(expect.any(Function)); // Check if action is dispatched
+  });
+
+  test("should handle single select and reset selected values", () => {
+    const { result } = renderHook(() =>
+      useSearchSuggestion(callbackFn, false, "suggestions", [])
+    );
+
+    // Simulate input change and selection
+    act(() => {
+      result.current.handleInputChange({ target: { value: "item" } });
+    });
+
+    expect(result.current.loading).toBe(true);
+
+    act(() => {
+      result.current.handleSelectionChange(null, "Item 1");
+    });
+
+    expect(result.current.selectedValues).toEqual("Item 1");
+
+    // Now clear input
+    act(() => {
+      result.current.handleInputChange({ target: { value: "" } });
+    });
+
+    expect(result.current.selectedValues).toBeNull();
+  });
+
+  test("should not fetch suggestions if debounceValue is empty", async () => {
+    useDebounce.mockReturnValueOnce(""); // Simulate empty debounce value
+
+    const { result } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
+
+    // Simulate input change
+    act(() => {
+      result.current.handleInputChange({ target: { value: "" } });
+    });
+
+    expect(callbackFn).not.toHaveBeenCalled(); // No fetch when input is empty
+    expect(result.current.suggestionList).toEqual([]);
+  });
+
+  test("should handle errors during suggestion fetching", async () => {
+    const mockError = new Error("API Error");
+    callbackFn.mockRejectedValueOnce(mockError);
+
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useSearchSuggestion(callbackFn, true, "suggestions", [])
+    );
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: "test" } });
+    });
+
+    await waitForNextUpdate();
+
+    expect(callbackFn).toHaveBeenCalled();
+    expect(result.current.suggestionList).toEqual([]); // Suggestions cleared on error
+    expect(result.current.loading).toBe(false);
+  });
+});
