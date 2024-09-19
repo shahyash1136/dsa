@@ -1,8 +1,7 @@
 import React from "react";
-import { render, fireEvent, screen } from "@testing-library/react";
+import { render, fireEvent, screen, waitFor } from "@testing-library/react";
 import SearchBar from "./SearchBar"; // Adjust the path based on your file structure
-import { Autocomplete, Checkbox, CircularProgress } from "@mui/material";
-import { Search } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 
 // Mock necessary utilities and components
 jest.mock("../../../common/utils", () => ({
@@ -33,6 +32,7 @@ describe("SearchBar Component", () => {
     jest.clearAllMocks();
   });
 
+  // Test 1: Basic Rendering with Default Props
   test("renders with default props", () => {
     renderComponent();
     expect(screen.getByLabelText(/search label/i)).toBeInTheDocument();
@@ -40,13 +40,37 @@ describe("SearchBar Component", () => {
     expect(screen.getByTestId("formatted-Search here...")).toBeInTheDocument();
   });
 
-  test("calls handleInputChange when typing in the search field", () => {
-    renderComponent();
+  // Test 2: Input Change Event and Loader (Simulating API Call)
+  test("renders loader and triggers API call on typing", async () => {
+    // Mocking handleInputChange to simulate API call and loading state
+    const handleInputChangeMock = jest.fn().mockImplementation((e) => {
+      // Simulate async API call by changing the loading prop
+      defaultProps.loading = true;
+      setTimeout(() => {
+        defaultProps.loading = false;
+      }, 500);
+    });
+
+    renderComponent({ handleInputChange: handleInputChangeMock });
+
     const input = screen.getByPlaceholderText(/search here/i);
+    
+    // Simulate typing in the input field
     fireEvent.change(input, { target: { value: "new value" } });
-    expect(handleInputChange).toHaveBeenCalledWith(expect.any(Object));
+
+    // Expect loading spinner to appear immediately
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    // Wait for the mock API call to "complete"
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    // Verify the input change handler was called
+    expect(handleInputChangeMock).toHaveBeenCalledWith(expect.any(Object));
   });
 
+  // Test 3: Handling Option Selection
   test("renders options and calls handleSelectionChange on selection", () => {
     renderComponent();
     const input = screen.getByPlaceholderText(/search here/i);
@@ -61,12 +85,14 @@ describe("SearchBar Component", () => {
     );
   });
 
+  // Test 4: Displays loading indicator when loading is true
   test("displays loading indicator when loading is true", () => {
     renderComponent({ loading: true });
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     expect(screen.queryByTestId("Search")).not.toBeInTheDocument();
   });
 
+  // Test 5: Renders checkboxes for multiple selections
   test("renders checkboxes for multiple selections", () => {
     renderComponent();
     const input = screen.getByPlaceholderText(/search here/i);
@@ -76,6 +102,7 @@ describe("SearchBar Component", () => {
     expect(checkboxes.length).toBe(2); // Based on defaultSuggestions
   });
 
+  // Test 6: Renders chips when multiple is true
   test("renders chips when multiple is true", () => {
     const selectedValues = ["Option 1", "Option 2"];
     renderComponent({ selecetedValues: selectedValues });
@@ -85,6 +112,7 @@ describe("SearchBar Component", () => {
     });
   });
 
+  // Test 7: Limits tags when limit is true
   test("limits tags when limit is true", () => {
     const selectedValues = ["Option 1", "Option 2", "Option 3"];
     renderComponent({ selecetedValues: selectedValues, limit: true });
@@ -92,10 +120,24 @@ describe("SearchBar Component", () => {
     expect(screen.getAllByRole("button").length).toBe(2); // Since limit is 2
   });
 
+  // Test 8: Renders without crashing when no suggestions
   test("renders without crashing when no suggestions", () => {
     renderComponent({ suggestions: [] });
     const input = screen.getByPlaceholderText(/search here/i);
     fireEvent.click(input);
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  // Test 9: Correctly renders search icon when loading is false
+  test("renders search icon when not loading", () => {
+    renderComponent();
+    expect(screen.getByTestId("Search")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  // Test 10: Correctly formats data-testid using formatedDataTestId utility
+  test("uses formatedDataTestId for test id", () => {
+    renderComponent();
+    expect(screen.getByTestId("formatted-Search here...")).toBeInTheDocument();
   });
 });
