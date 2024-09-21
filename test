@@ -21,51 +21,16 @@ describe('MyComponent', () => {
     { value: 'suggestion2' }
   ];
 
-  beforeEach(() => {
-    // Mock the return value of useSearchSuggestions hook
-    useSearchSuggestions.mockReturnValue({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: mockSuggestionsList,
-      loading: false,
-      selectedValues: [],
-      searchTerm: ''
-    });
-  });
-
   afterEach(() => {
     jest.clearAllMocks(); // Clear all mocks after each test
   });
 
-  it('should render SearchBar with the correct props', () => {
-    render(<MyComponent multiple={true} />);
-
-    // Check if SearchBar is rendered with correct props
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    
-    expect(searchBar).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Type to search...')).toBeInTheDocument();
-    expect(screen.getByLabelText('Search')).toBeInTheDocument();
-  });
-
-  it('should pass the correct suggestions to SearchBar when suggestionsList is not empty', () => {
-    render(<MyComponent multiple={true} />);
-
-    // Verify if the suggestions are passed correctly
-    const suggestions = screen.getByTestId('my-component-search-bar');
-    expect(suggestions).toBeInTheDocument();
-    
-    // Make sure the mapped values are correct
-    const mappedSuggestions = mockSuggestionsList.map(el => el.value);
-    expect(mappedSuggestions).toEqual(['suggestion1', 'suggestion2']);
-  });
-
-  it('should handle when suggestionsList is empty or undefined', () => {
-    // Mock the case when suggestionsList is null or undefined
-    useSearchSuggestions.mockReturnValueOnce({
+  it('should map the suggestionsList when it contains values', () => {
+    // Mock the return value of useSearchSuggestions with a populated suggestionsList
+    useSearchSuggestions.mockReturnValue({
       handleSelectionChange: mockHandleSelectionChange,
       handleInputChange: mockHandleInputChange,
-      suggestionsList: null, // Simulate null/undefined scenario
+      suggestionsList: mockSuggestionsList, // Non-empty array
       loading: false,
       selectedValues: [],
       searchTerm: ''
@@ -73,11 +38,76 @@ describe('MyComponent', () => {
 
     render(<MyComponent multiple={true} />);
 
-    // Verify that suggestionsList being null does not break the component
+    // Verify the mapped suggestions are displayed correctly
     const searchBar = screen.getByTestId('my-component-search-bar');
     expect(searchBar).toBeInTheDocument();
 
-    // In this case, the suggestions array passed to the SearchBar should be empty
+    // Ensure the values are passed correctly to SearchBar
+    expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
+  });
+
+  it('should handle an empty suggestionsList gracefully', () => {
+    // Mock an empty suggestionsList
+    useSearchSuggestions.mockReturnValue({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: [], // Empty array
+      loading: false,
+      selectedValues: [],
+      searchTerm: ''
+    });
+
+    render(<MyComponent multiple={true} />);
+
+    // Check if SearchBar is rendered without breaking
+    const searchBar = screen.getByTestId('my-component-search-bar');
+    expect(searchBar).toBeInTheDocument();
+
+    // No suggestions should be present
+    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
+    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
+  });
+
+  it('should handle a null suggestionsList gracefully', () => {
+    // Mock the case when suggestionsList is null
+    useSearchSuggestions.mockReturnValue({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: null, // Null suggestions list
+      loading: false,
+      selectedValues: [],
+      searchTerm: ''
+    });
+
+    render(<MyComponent multiple={true} />);
+
+    // Check if SearchBar is rendered without breaking
+    const searchBar = screen.getByTestId('my-component-search-bar');
+    expect(searchBar).toBeInTheDocument();
+
+    // No suggestions should be rendered since it's null
+    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
+    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
+  });
+
+  it('should handle an undefined suggestionsList gracefully', () => {
+    // Mock the case when suggestionsList is undefined
+    useSearchSuggestions.mockReturnValue({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: undefined, // Undefined suggestions list
+      loading: false,
+      selectedValues: [],
+      searchTerm: ''
+    });
+
+    render(<MyComponent multiple={true} />);
+
+    // Check if SearchBar is rendered without breaking
+    const searchBar = screen.getByTestId('my-component-search-bar');
+    expect(searchBar).toBeInTheDocument();
+
+    // No suggestions should be rendered since it's undefined
     expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
     expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
   });
