@@ -2,33 +2,41 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import MyComponent from './MyComponent'; // Adjust the import based on your file structure
 
 describe('MyComponent', () => {
+  let inputValue;
+  let setInputValue;
+
+  beforeEach(() => {
+    inputValue = '';
+    setInputValue = jest.fn((value) => { inputValue = value; });
+  });
+
   it('removes trailing comma on blur', () => {
-    render(<MyComponent />);
+    // Initialize with a trailing comma
+    inputValue = 'test,';
+
+    render(<MyComponent inputValue={inputValue} setInputValue={setInputValue} />);
     
     const input = screen.getByRole('textbox');
 
-    // Set input value to 'test,'
-    fireEvent.change(input, { target: { value: 'test,' } });
-    
     // Simulate blur event
     fireEvent.blur(input);
     
-    // Check if the input value is 'test' (trailing comma removed)
-    expect(input.value).toBe('test');
+    // Check if setInputValue was called with 'test'
+    expect(setInputValue).toHaveBeenCalledWith('test');
   });
 
   it('keeps value unchanged if no trailing comma on blur', () => {
-    render(<MyComponent />);
+    // Initialize without a trailing comma
+    inputValue = 'test';
+
+    render(<MyComponent inputValue={inputValue} setInputValue={setInputValue} />);
     
     const input = screen.getByRole('textbox');
 
-    // Set input value to 'test'
-    fireEvent.change(input, { target: { value: 'test' } });
-    
     // Simulate blur event
     fireEvent.blur(input);
     
-    // Check if the input value remains 'test'
-    expect(input.value).toBe('test');
+    // Check if setInputValue was called with 'test'
+    expect(setInputValue).toHaveBeenCalledWith('test');
   });
 });
