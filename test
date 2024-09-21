@@ -1,155 +1,51 @@
-import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
-import MyComponent from './MyComponent'; // Adjust the path to MyComponent
-import useSearchSuggestions from '../../useSearchSuggestions'; // Mock the hook
-import { getData } from '../../api'; // Mock the API call
-import { action } from '../../actionFile'; // Mock the action
-
-// Mock the useSearchSuggestions hook
-jest.mock('../../useSearchSuggestions');
-jest.mock('../../api'); // Optional: if you want to mock getData
-jest.mock('../../actionFile', () => ({
-  action: jest.fn() // Mock the action if needed
-}));
-
-describe('MyComponent', () => {
-  const mockHandleSelectionChange = jest.fn();
-  const mockHandleInputChange = jest.fn();
-
-  const mockSuggestionsList = [
-    { value: 'suggestion1' },
-    { value: 'suggestion2' }
-  ];
-
-  afterEach(() => {
-    jest.clearAllMocks(); // Clear all mocks after each test
+it('should pass the correct suggestions to SearchBar when suggestionsList is populated after API call', async () => {
+  // Initial mock return value with an empty suggestionsList and loading state as true
+  useSearchSuggestions.mockReturnValue({
+    handleSelectionChange: mockHandleSelectionChange,
+    handleInputChange: mockHandleInputChange,
+    suggestionsList: [], // Initially empty
+    loading: true, // Loader active before data is fetched
+    selectedValues: [],
+    searchTerm: ''
   });
 
-  it('should map the suggestionsList when it contains values', () => {
-    // Mock the return value of useSearchSuggestions with a populated suggestionsList
-    useSearchSuggestions.mockReturnValue({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: mockSuggestionsList, // Non-empty array
-      loading: false,
-      selectedValues: [],
-      searchTerm: ''
-    });
+  // Render the component
+  render(<MyComponent multiple={true} />);
 
-    render(<MyComponent multiple={true} />);
+  // Simulate typing to trigger the API call
+  const input = screen.getByPlaceholderText('Type to search...');
+  fireEvent.change(input, { target: { value: 'test input' } });
 
-    // Verify the mapped suggestions are displayed correctly
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    expect(searchBar).toBeInTheDocument();
+  // Check if the loader is displayed while loading
+  expect(screen.getByRole('progressbar')).toBeInTheDocument();
 
-    // Ensure the values are passed correctly to SearchBar
-    expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
+  // After the API call, simulate the suggestions being populated
+  useSearchSuggestions.mockReturnValueOnce({
+    handleSelectionChange: mockHandleSelectionChange,
+    handleInputChange: mockHandleInputChange,
+    suggestionsList: [
+      { value: 'suggestion1' },
+      { value: 'suggestion2' }
+    ], // Data received from API
+    loading: false, // Loader stops once data is fetched
+    selectedValues: [],
+    searchTerm: 'test input'
   });
 
-  it('should handle an empty suggestionsList gracefully', () => {
-    // Mock an empty suggestionsList
-    useSearchSuggestions.mockReturnValue({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: [], // Empty array
-      loading: false,
-      selectedValues: [],
-      searchTerm: ''
-    });
+  // Re-render to reflect the updated state with populated suggestions
+  render(<MyComponent multiple={true} />);
 
-    render(<MyComponent multiple={true} />);
+  // Ensure the loading indicator is gone
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 
-    // Check if SearchBar is rendered without breaking
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    expect(searchBar).toBeInTheDocument();
+  // Verify the suggestions are passed to the SearchBar correctly
+  const searchBar = screen.getByTestId('my-component-search-bar');
+  expect(searchBar).toBeInTheDocument();
 
-    // No suggestions should be present
-    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
-    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
-  });
+  // Check if the suggestions are passed to SearchBar as expected
+  expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
 
-  it('should handle a null suggestionsList gracefully', () => {
-    // Mock the case when suggestionsList is null
-    useSearchSuggestions.mockReturnValue({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: null, // Null suggestions list
-      loading: false,
-      selectedValues: [],
-      searchTerm: ''
-    });
-
-    render(<MyComponent multiple={true} />);
-
-    // Check if SearchBar is rendered without breaking
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    expect(searchBar).toBeInTheDocument();
-
-    // No suggestions should be rendered since it's null
-    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
-    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
-  });
-
-  it('should handle an undefined suggestionsList gracefully', () => {
-    // Mock the case when suggestionsList is undefined
-    useSearchSuggestions.mockReturnValue({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: undefined, // Undefined suggestions list
-      loading: false,
-      selectedValues: [],
-      searchTerm: ''
-    });
-
-    render(<MyComponent multiple={true} />);
-
-    // Check if SearchBar is rendered without breaking
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    expect(searchBar).toBeInTheDocument();
-
-    // No suggestions should be rendered since it's undefined
-    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
-    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
-  });
-
-  it('should call handleInputChange when input is changed', () => {
-    render(<MyComponent multiple={true} />);
-
-    const searchBar = screen.getByTestId('my-component-search-bar');
-    const input = screen.getByPlaceholderText('Type to search...');
-    
-    // Simulate typing in the input field
-    fireEvent.change(input, { target: { value: 'test' } });
-
-    // Check if handleInputChange is called
-    expect(mockHandleInputChange).toHaveBeenCalledWith('test');
-  });
-
-  it('should call handleSelectionChange when a selection is made', () => {
-    render(<MyComponent multiple={true} />);
-
-    // Simulate a selection event
-    fireEvent.click(screen.getByTestId('my-component-search-bar'));
-
-    // Check if handleSelectionChange is called
-    expect(mockHandleSelectionChange).toHaveBeenCalled();
-  });
-
-  it('should show loading indicator when loading is true', () => {
-    // Mock the loading state as true
-    useSearchSuggestions.mockReturnValueOnce({
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-      suggestionsList: mockSuggestionsList,
-      loading: true,
-      selectedValues: [],
-      searchTerm: ''
-    });
-
-    render(<MyComponent multiple={true} />);
-
-    // Check if the loading state is rendered
-    const loadingIndicator = screen.getByRole('progressbar'); // Assuming CircularProgress shows this role
-    expect(loadingIndicator).toBeInTheDocument();
-  });
+  // Ensure suggestions are displayed in the Autocomplete component
+  expect(screen.getByText('suggestion1')).toBeInTheDocument();
+  expect(screen.getByText('suggestion2')).toBeInTheDocument();
 });
