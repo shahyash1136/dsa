@@ -48,13 +48,38 @@ describe('MyComponent', () => {
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
   });
 
-  it('should pass the correct suggestions to SearchBar', () => {
+  it('should pass the correct suggestions to SearchBar when suggestionsList is not empty', () => {
     render(<MyComponent multiple={true} />);
 
     // Verify if the suggestions are passed correctly
     const suggestions = screen.getByTestId('my-component-search-bar');
     expect(suggestions).toBeInTheDocument();
-    expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
+    
+    // Make sure the mapped values are correct
+    const mappedSuggestions = mockSuggestionsList.map(el => el.value);
+    expect(mappedSuggestions).toEqual(['suggestion1', 'suggestion2']);
+  });
+
+  it('should handle when suggestionsList is empty or undefined', () => {
+    // Mock the case when suggestionsList is null or undefined
+    useSearchSuggestions.mockReturnValueOnce({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: null, // Simulate null/undefined scenario
+      loading: false,
+      selectedValues: [],
+      searchTerm: ''
+    });
+
+    render(<MyComponent multiple={true} />);
+
+    // Verify that suggestionsList being null does not break the component
+    const searchBar = screen.getByTestId('my-component-search-bar');
+    expect(searchBar).toBeInTheDocument();
+
+    // In this case, the suggestions array passed to the SearchBar should be empty
+    expect(screen.queryByText('suggestion1')).not.toBeInTheDocument();
+    expect(screen.queryByText('suggestion2')).not.toBeInTheDocument();
   });
 
   it('should call handleInputChange when input is changed', () => {
