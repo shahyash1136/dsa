@@ -1,72 +1,68 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import Autocomplete from '@mui/material/Autocomplete';
-import Checkbox from '@mui/material/Checkbox';
-import Chip from '@mui/material/Chip';
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useDispatch } from 'react-redux';
+import useInputValue from './useInputValue'; // Adjust the import based on your file structure
+import useDebounce from './useDebounce'; // Import your debounce hook
 
-describe('Autocomplete Component', () => {
-  const options = ['Option 1', 'Option 2', 'Option 3'];
-  const mockRenderOption = jest.fn((props, option, { selected }) => {
-    return (
-      <li {...props}>
-        <Checkbox
-          checked={selected}
-        />
-        {option}
-      </li>
-    );
+jest.mock('react-redux', () => ({
+  useDispatch: jest.fn(),
+}));
+
+jest.mock('./useDebounce');
+
+describe('useInputValue', () => {
+  const mockDispatch = jest.fn();
+  const mockAction = jest.fn();
+
+  beforeEach(() => {
+    useDispatch.mockReturnValue(mockDispatch);
+    jest.clearAllMocks();
   });
 
-  const mockRenderTags = jest.fn((tagValue, getTagProps) =>
-    tagValue.map((option, index) => {
-      return (
-        <Chip key={index} label={option} {...getTagProps({ index })} />
-      );
-    })
-  );
+  it('should initialize inputValue as an empty string', () => {
+    const { result } = renderHook(() => useInputValue(mockAction));
 
-  it('renders options correctly with Checkbox', () => {
-    render(
-      <Autocomplete
-        multiple
-        options={options}
-        disableCloseOnSelect
-        renderOption={mockRenderOption}
-        renderTags={mockRenderTags}
-      />
-    );
+    expect(result.current.inputValue).toBe('');
+  });
 
-    // Open the dropdown
-    const input = screen.getByRole('combobox');
-    userEvent.click(input);
+  it('should update inputValue on input change', () => {
+    const { result } = renderHook(() => useInputValue(mockAction));
 
-    // Verify that all options are rendered
-    options.forEach((option) => {
-      expect(screen.getByText(option)).toBeInTheDocument();
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'test' } });
     });
 
-    // Verify that renderOption is called with correct arguments
-    expect(mockRenderOption).toHaveBeenCalledWith(expect.any(Object), 'Option 1', { selected: false });
-    expect(mockRenderOption).toHaveBeenCalledWith(expect.any(Object), 'Option 2', { selected: false });
+    expect(result.current.inputValue).toBe('test');
   });
 
-  it('renders selected options as Chips', () => {
-    render(
-      <Autocomplete
-        multiple
-        options={options}
-        value={['Option 1', 'Option 2']}
-        disableCloseOnSelect
-        renderOption={mockRenderOption}
-        renderTags={mockRenderTags}
-      />
-    );
+  it('should call dispatch with action when debounceValue changes', () => {
+    useDebounce.mockReturnValue('debouncedValue'); // Mock the debounce return value
+    const { result } = renderHook(() => useInputValue(mockAction));
 
-    // Check that selected options are rendered as Chips
-    expect(screen.getByText('Option 1')).toBeInTheDocument();
-    expect(screen.getByText('Option 2')).toBeInTheDocument();
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'test' } });
+    });
 
-    // Ensure the renderTags function is called with correct arguments
-    expect(mockRenderTags).toHaveBeenCalled();
+    act(() => {
+      // Simulate debounce effect
+      result.rerender();
+    });
+
+    expect(mockDispatch).toHaveBeenCalledWith(mockAction('debouncedValue'));
+  });
+
+  it('should not call dispatch if debounceValue is empty', () => {
+    useDebounce.mockReturnValue(''); // Simulate empty debounce value
+    const { result } = renderHook(() => useInputValue(mockAction));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'test' } });
+    });
+
+    act(() => {
+      // Simulate debounce effect
+      result.rerender();
+    });
+
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 });
