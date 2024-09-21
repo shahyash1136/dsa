@@ -8,8 +8,9 @@ describe('MyComponent', () => {
 
   beforeEach(() => {
     inputValue = '';
-    setInputValue = jest.fn((value) => {
-      inputValue = value; // Mock implementation
+    setInputValue = jest.fn((updater) => {
+      // Call the updater function with the current inputValue
+      inputValue = typeof updater === 'function' ? updater(inputValue) : updater;
     });
     onInputChange = jest.fn(); // Mock onInputChange
   });
@@ -33,7 +34,14 @@ describe('MyComponent', () => {
     fireEvent.blur(input);
     
     // Check if setInputValue was called with 'test' (trailing comma removed)
-    expect(setInputValue).toHaveBeenCalledWith('test');
+    expect(setInputValue).toHaveBeenCalledWith(expect.any(Function));
+    
+    // Call the function to simulate the state update
+    const updater = setInputValue.mock.calls[0][0]; // Get the first call's function
+    updater(inputValue); // Call it with the initial value
+
+    // Check the new value after the update
+    expect(inputValue).toBe('test');
   });
 
   it('keeps value unchanged if no trailing comma on blur', () => {
@@ -54,7 +62,14 @@ describe('MyComponent', () => {
     // Simulate blur event
     fireEvent.blur(input);
     
-    // Check if setInputValue was called with 'test'
-    expect(setInputValue).toHaveBeenCalledWith('test');
+    // Check if setInputValue was called with the function
+    expect(setInputValue).toHaveBeenCalledWith(expect.any(Function));
+
+    // Call the function to simulate the state update
+    const updater = setInputValue.mock.calls[0][0]; // Get the first call's function
+    updater(inputValue); // Call it with the initial value
+
+    // Check the value remains unchanged
+    expect(inputValue).toBe('test');
   });
 });
