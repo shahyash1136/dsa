@@ -1,22 +1,60 @@
-import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import MyComponent from './MyComponent'; // Adjust the import based on your file structure
 
-const MyComponent = ({ label, inputValue, setInputValue, onInputChange, dataTestId }) => {
-  const handleBlur = () => {
-    setInputValue(prevValue => prevValue.endsWith(',') ? prevValue.slice(0, -1) : prevValue);
-  };
+describe('MyComponent', () => {
+  let inputValue;
+  let setInputValue;
+  let onInputChange;
 
-  return (
-    <div>
-      <label>{label}</label>
-      <input
-        type="text"
-        value={inputValue}
-        onBlur={handleBlur}
-        onChange={onInputChange}
-        data-testid={dataTestId}
+  beforeEach(() => {
+    inputValue = '';
+    setInputValue = jest.fn((value) => {
+      inputValue = value; // Mock implementation
+    });
+    onInputChange = jest.fn(); // Mock onInputChange
+  });
+
+  it('removes trailing comma on blur', () => {
+    inputValue = 'test,'; // Set initial value with trailing comma
+
+    render(
+      <MyComponent 
+        label="Test Label" 
+        inputValue={inputValue} 
+        setInputValue={setInputValue} 
+        onInputChange={onInputChange} 
+        dataTestId="my-input"
       />
-    </div>
-  );
-};
+    );
 
-export default MyComponent;
+    const input = screen.getByTestId('my-input');
+    
+    // Simulate blur event
+    fireEvent.blur(input);
+    
+    // Check if setInputValue was called with 'test' (trailing comma removed)
+    expect(setInputValue).toHaveBeenCalledWith('test');
+  });
+
+  it('keeps value unchanged if no trailing comma on blur', () => {
+    inputValue = 'test'; // Set initial value without trailing comma
+
+    render(
+      <MyComponent 
+        label="Test Label" 
+        inputValue={inputValue} 
+        setInputValue={setInputValue} 
+        onInputChange={onInputChange} 
+        dataTestId="my-input"
+      />
+    );
+
+    const input = screen.getByTestId('my-input');
+    
+    // Simulate blur event
+    fireEvent.blur(input);
+    
+    // Check if setInputValue was called with 'test'
+    expect(setInputValue).toHaveBeenCalledWith('test');
+  });
+});
