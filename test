@@ -1,36 +1,34 @@
-import { render, fireEvent } from '@testing-library/react';
-import MyComponent from './MyComponent'; // Adjust the import path as necessary
+import { render, screen, fireEvent } from '@testing-library/react';
+import MyComponent from './MyComponent'; // Adjust the import based on your file structure
 
 describe('MyComponent', () => {
-  it('removes the trailing comma when handlebar is called', () => {
-    const { getByRole } = render(<MyComponent />);
-    const input = getByRole('textbox'); // Access the input element
-    const button = getByRole('button', { name: /handle/i }); // Access the button element
+  it('removes trailing comma on blur', () => {
+    render(<MyComponent />);
+    
+    const input = screen.getByRole('textbox');
 
     // Set input value to 'test,'
     fireEvent.change(input, { target: { value: 'test,' } });
-    expect(input.value).toBe('test,');
-
-    // Call handlebar
-    fireEvent.click(button);
-
-    // Check that the trailing comma has been removed
+    
+    // Simulate blur event
+    fireEvent.blur(input);
+    
+    // Check if the input value is 'test' (trailing comma removed)
     expect(input.value).toBe('test');
   });
 
-  it('does not change the input value if it does not end with a comma', () => {
-    const { getByRole } = render(<MyComponent />);
-    const input = getByRole('textbox');
-    const button = getByRole('button', { name: /handle/i });
+  it('keeps value unchanged if no trailing comma on blur', () => {
+    render(<MyComponent />);
+    
+    const input = screen.getByRole('textbox');
 
     // Set input value to 'test'
     fireEvent.change(input, { target: { value: 'test' } });
-    expect(input.value).toBe('test');
-
-    // Call handlebar
-    fireEvent.click(button);
-
-    // Check that the value remains unchanged
+    
+    // Simulate blur event
+    fireEvent.blur(input);
+    
+    // Check if the input value remains 'test'
     expect(input.value).toBe('test');
   });
 });
