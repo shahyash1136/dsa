@@ -1,10 +1,10 @@
 it('should pass the correct suggestions to SearchBar when suggestionsList is populated after API call', async () => {
-  // Initial mock return value with an empty suggestionsList and loading state as true
+  // Initial mock return value with an empty suggestionsList and loading set to false
   useSearchSuggestions.mockReturnValue({
     handleSelectionChange: mockHandleSelectionChange,
     handleInputChange: mockHandleInputChange,
     suggestionsList: [], // Initially empty
-    loading: true, // Loader active before data is fetched
+    loading: false, // Loader is not active initially
     selectedValues: [],
     searchTerm: ''
   });
@@ -16,10 +16,26 @@ it('should pass the correct suggestions to SearchBar when suggestionsList is pop
   const input = screen.getByPlaceholderText('Type to search...');
   fireEvent.change(input, { target: { value: 'test input' } });
 
-  // Check if the loader is displayed while loading
+  // Ensure loader is not displayed initially since loading is false
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+
+  // After the API call, simulate the suggestions being populated and loader briefly becoming true
+  useSearchSuggestions.mockReturnValueOnce({
+    handleSelectionChange: mockHandleSelectionChange,
+    handleInputChange: mockHandleInputChange,
+    suggestionsList: [], // Still empty while API is fetching data
+    loading: true, // Loader active when data is fetching
+    selectedValues: [],
+    searchTerm: 'test input'
+  });
+
+  // Rerender to reflect the loader state during API call
+  render(<MyComponent multiple={true} />);
+
+  // Ensure loader is displayed when loading is true
   expect(screen.getByRole('progressbar')).toBeInTheDocument();
 
-  // After the API call, simulate the suggestions being populated
+  // Now simulate that the API has returned data, and suggestionsList is populated
   useSearchSuggestions.mockReturnValueOnce({
     handleSelectionChange: mockHandleSelectionChange,
     handleInputChange: mockHandleInputChange,
@@ -32,10 +48,10 @@ it('should pass the correct suggestions to SearchBar when suggestionsList is pop
     searchTerm: 'test input'
   });
 
-  // Re-render to reflect the updated state with populated suggestions
+  // Rerender again to reflect the final state with the suggestions list populated
   render(<MyComponent multiple={true} />);
 
-  // Ensure the loading indicator is gone
+  // Ensure the loading indicator is no longer displayed
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 
   // Verify the suggestions are passed to the SearchBar correctly
@@ -43,9 +59,6 @@ it('should pass the correct suggestions to SearchBar when suggestionsList is pop
   expect(searchBar).toBeInTheDocument();
 
   // Check if the suggestions are passed to SearchBar as expected
-  expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
-
-  // Ensure suggestions are displayed in the Autocomplete component
   expect(screen.getByText('suggestion1')).toBeInTheDocument();
   expect(screen.getByText('suggestion2')).toBeInTheDocument();
 });
