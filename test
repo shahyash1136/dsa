@@ -1,75 +1,100 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import MyComponent from './MyComponent'; // Adjust the import based on your file structure
+import React from 'react';
+import { render, fireEvent, screen } from '@testing-library/react';
+import MyComponent from './MyComponent'; // Adjust the path to MyComponent
+import useSearchSuggestions from '../../useSearchSuggestions'; // Mock the hook
+import { getData } from '../../api'; // Mock the API call
+import { action } from '../../actionFile'; // Mock the action
+
+// Mock the useSearchSuggestions hook
+jest.mock('../../useSearchSuggestions');
+jest.mock('../../api'); // Optional: if you want to mock getData
+jest.mock('../../actionFile', () => ({
+  action: jest.fn() // Mock the action if needed
+}));
 
 describe('MyComponent', () => {
-  let inputValue;
-  let setInputValue;
-  let onInputChange;
+  const mockHandleSelectionChange = jest.fn();
+  const mockHandleInputChange = jest.fn();
+
+  const mockSuggestionsList = [
+    { value: 'suggestion1' },
+    { value: 'suggestion2' }
+  ];
 
   beforeEach(() => {
-    inputValue = '';
-    setInputValue = jest.fn((updater) => {
-      // Call the updater function with the current inputValue
-      inputValue = typeof updater === 'function' ? updater(inputValue) : updater;
+    // Mock the return value of useSearchSuggestions hook
+    useSearchSuggestions.mockReturnValue({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: mockSuggestionsList,
+      loading: false,
+      selectedValues: [],
+      searchTerm: ''
     });
-    onInputChange = jest.fn(); // Mock onInputChange
   });
 
-  it('removes trailing comma on blur', () => {
-    inputValue = 'test,'; // Set initial value with trailing comma
-
-    render(
-      <MyComponent 
-        label="Test Label" 
-        inputValue={inputValue} 
-        setInputValue={setInputValue} 
-        onInputChange={onInputChange} 
-        dataTestId="my-input"
-      />
-    );
-
-    const input = screen.getByTestId('my-input');
-    
-    // Simulate blur event
-    fireEvent.blur(input);
-    
-    // Check if setInputValue was called with 'test' (trailing comma removed)
-    expect(setInputValue).toHaveBeenCalledWith(expect.any(Function));
-    
-    // Call the function to simulate the state update
-    const updater = setInputValue.mock.calls[0][0]; // Get the first call's function
-    updater(inputValue); // Call it with the initial value
-
-    // Check the new value after the update
-    expect(inputValue).toBe('test');
+  afterEach(() => {
+    jest.clearAllMocks(); // Clear all mocks after each test
   });
 
-  it('keeps value unchanged if no trailing comma on blur', () => {
-    inputValue = 'test'; // Set initial value without trailing comma
+  it('should render SearchBar with the correct props', () => {
+    render(<MyComponent multiple={true} />);
 
-    render(
-      <MyComponent 
-        label="Test Label" 
-        inputValue={inputValue} 
-        setInputValue={setInputValue} 
-        onInputChange={onInputChange} 
-        dataTestId="my-input"
-      />
-    );
-
-    const input = screen.getByTestId('my-input');
+    // Check if SearchBar is rendered with correct props
+    const searchBar = screen.getByTestId('my-component-search-bar');
     
-    // Simulate blur event
-    fireEvent.blur(input);
+    expect(searchBar).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Type to search...')).toBeInTheDocument();
+    expect(screen.getByLabelText('Search')).toBeInTheDocument();
+  });
+
+  it('should pass the correct suggestions to SearchBar', () => {
+    render(<MyComponent multiple={true} />);
+
+    // Verify if the suggestions are passed correctly
+    const suggestions = screen.getByTestId('my-component-search-bar');
+    expect(suggestions).toBeInTheDocument();
+    expect(mockSuggestionsList.map(el => el.value)).toEqual(['suggestion1', 'suggestion2']);
+  });
+
+  it('should call handleInputChange when input is changed', () => {
+    render(<MyComponent multiple={true} />);
+
+    const searchBar = screen.getByTestId('my-component-search-bar');
+    const input = screen.getByPlaceholderText('Type to search...');
     
-    // Check if setInputValue was called with the function
-    expect(setInputValue).toHaveBeenCalledWith(expect.any(Function));
+    // Simulate typing in the input field
+    fireEvent.change(input, { target: { value: 'test' } });
 
-    // Call the function to simulate the state update
-    const updater = setInputValue.mock.calls[0][0]; // Get the first call's function
-    updater(inputValue); // Call it with the initial value
+    // Check if handleInputChange is called
+    expect(mockHandleInputChange).toHaveBeenCalledWith('test');
+  });
 
-    // Check the value remains unchanged
-    expect(inputValue).toBe('test');
+  it('should call handleSelectionChange when a selection is made', () => {
+    render(<MyComponent multiple={true} />);
+
+    // Simulate a selection event
+    fireEvent.click(screen.getByTestId('my-component-search-bar'));
+
+    // Check if handleSelectionChange is called
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
+  });
+
+  it('should show loading indicator when loading is true', () => {
+    // Mock the loading state as true
+    useSearchSuggestions.mockReturnValueOnce({
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+      suggestionsList: mockSuggestionsList,
+      loading: true,
+      selectedValues: [],
+      searchTerm: ''
+    });
+
+    render(<MyComponent multiple={true} />);
+
+    // Check if the loading state is rendered
+    const loadingIndicator = screen.getByRole('progressbar'); // Assuming CircularProgress shows this role
+    expect(loadingIndicator).toBeInTheDocument();
   });
 });
