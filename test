@@ -1,68 +1,36 @@
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useDispatch } from 'react-redux';
-import useInputValue from './useInputValue'; // Adjust the import based on your file structure
-import useDebounce from './useDebounce'; // Import your debounce hook
+import { render, fireEvent } from '@testing-library/react';
+import MyComponent from './MyComponent'; // Adjust the import path as necessary
 
-jest.mock('react-redux', () => ({
-  useDispatch: jest.fn(),
-}));
+describe('MyComponent', () => {
+  it('removes the trailing comma when handlebar is called', () => {
+    const { getByRole } = render(<MyComponent />);
+    const input = getByRole('textbox'); // Access the input element
+    const button = getByRole('button', { name: /handle/i }); // Access the button element
 
-jest.mock('./useDebounce');
+    // Set input value to 'test,'
+    fireEvent.change(input, { target: { value: 'test,' } });
+    expect(input.value).toBe('test,');
 
-describe('useInputValue', () => {
-  const mockDispatch = jest.fn();
-  const mockAction = jest.fn();
+    // Call handlebar
+    fireEvent.click(button);
 
-  beforeEach(() => {
-    useDispatch.mockReturnValue(mockDispatch);
-    jest.clearAllMocks();
+    // Check that the trailing comma has been removed
+    expect(input.value).toBe('test');
   });
 
-  it('should initialize inputValue as an empty string', () => {
-    const { result } = renderHook(() => useInputValue(mockAction));
+  it('does not change the input value if it does not end with a comma', () => {
+    const { getByRole } = render(<MyComponent />);
+    const input = getByRole('textbox');
+    const button = getByRole('button', { name: /handle/i });
 
-    expect(result.current.inputValue).toBe('');
-  });
+    // Set input value to 'test'
+    fireEvent.change(input, { target: { value: 'test' } });
+    expect(input.value).toBe('test');
 
-  it('should update inputValue on input change', () => {
-    const { result } = renderHook(() => useInputValue(mockAction));
+    // Call handlebar
+    fireEvent.click(button);
 
-    act(() => {
-      result.current.handleInputChange({ target: { value: 'test' } });
-    });
-
-    expect(result.current.inputValue).toBe('test');
-  });
-
-  it('should call dispatch with action when debounceValue changes', () => {
-    useDebounce.mockReturnValue('debouncedValue'); // Mock the debounce return value
-    const { result } = renderHook(() => useInputValue(mockAction));
-
-    act(() => {
-      result.current.handleInputChange({ target: { value: 'test' } });
-    });
-
-    act(() => {
-      // Simulate debounce effect
-      result.rerender();
-    });
-
-    expect(mockDispatch).toHaveBeenCalledWith(mockAction('debouncedValue'));
-  });
-
-  it('should not call dispatch if debounceValue is empty', () => {
-    useDebounce.mockReturnValue(''); // Simulate empty debounce value
-    const { result } = renderHook(() => useInputValue(mockAction));
-
-    act(() => {
-      result.current.handleInputChange({ target: { value: 'test' } });
-    });
-
-    act(() => {
-      // Simulate debounce effect
-      result.rerender();
-    });
-
-    expect(mockDispatch).not.toHaveBeenCalled();
+    // Check that the value remains unchanged
+    expect(input.value).toBe('test');
   });
 });
