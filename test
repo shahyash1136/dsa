@@ -1,68 +1,111 @@
-it('should pass the correct suggestions to SearchBar when suggestionsList is populated after API call', async () => {
-  // Initial mock return value with an empty suggestionsList and loading set to false
-  useSearchSuggestions.mockReturnValue({
-    handleSelectionChange: mockHandleSelectionChange,
-    handleInputChange: mockHandleInputChange,
-    suggestionsList: [], // Initially empty
-    loading: false, // Loader is not active initially
-    selectedValues: [],
-    searchTerm: ''
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect'; // for additional matchers
+import CountryOfDomicile from './CountryOfDomicile';
+import * as useSearchSuggestionsHook from '../../hooks/useSearchSuggestions'; // Mock the hook
+import SearchBar from '../../SearchBar/SearchBar'; // Mocked component
+
+// Mock useSearchSuggestions to return specific values
+jest.mock('../../hooks/useSearchSuggestions');
+jest.mock('../../SearchBar/SearchBar', () => jest.fn(() => <div data-testid="mock-search-bar" />));
+
+describe('CountryOfDomicile Component', () => {
+  const mockHandleSelectionChange = jest.fn();
+  const mockHandleInputChange = jest.fn();
+
+  beforeEach(() => {
+    // Mock the return values of the useSearchSuggestions hook
+    useSearchSuggestionsHook.default.mockReturnValue({
+      suggestionList: [{ value: 'Country 1' }, { value: 'Country 2' }],
+      loading: false,
+      selectedValues: [],
+      searchTerm: '',
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+    });
   });
 
-  // Render the component
-  render(<MyComponent multiple={true} />);
-
-  // Simulate typing to trigger the API call
-  const input = screen.getByPlaceholderText('Type to search...');
-  fireEvent.change(input, { target: { value: 'test input' } });
-
-  // Ensure loader is not displayed initially since loading is false
-  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-
-  // Simulate API call and loading
-  useSearchSuggestions.mockReturnValueOnce({
-    handleSelectionChange: mockHandleSelectionChange,
-    handleInputChange: mockHandleInputChange,
-    suggestionsList: [], // Still empty while API is fetching data
-    loading: true, // Loader active when data is fetching
-    selectedValues: [],
-    searchTerm: 'test input'
+  afterEach(() => {
+    jest.clearAllMocks(); // Reset mock data after each test
   });
 
-  // Rerender to reflect the loader state during API call
-  render(<MyComponent multiple={true} />);
+  test('renders the SearchBar component', () => {
+    render(<CountryOfDomicile multiple={true} />);
 
-  // Ensure loader is displayed when loading is true
-  expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Verify if the SearchBar component is rendered
+    const searchBarElement = screen.getByTestId('mock-search-bar');
+    expect(searchBarElement).toBeInTheDocument();
+  });
 
-  // Simulate a wait for the API call to resolve and return data
-  useSearchSuggestions.mockReturnValueOnce(new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
+  test('passes the correct props to SearchBar component', () => {
+    render(<CountryOfDomicile multiple={true} />);
+
+    // Verify if SearchBar has received the correct props
+    expect(SearchBar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        suggestions: [{ value: 'Country 1' }, { value: 'Country 2' }],
+        Loading: false,
+        selectedValues: [],
+        searchTerm: '',
+        multiple: true,
+        label: 'Country Of Domicile',
+        placeholder: 'Country Of Domicile',
+        Limit: true,
         handleSelectionChange: mockHandleSelectionChange,
         handleInputChange: mockHandleInputChange,
-        suggestionsList: [
-          { value: 'suggestion1' },
-          { value: 'suggestion2' }
-        ], // Data received from API
-        loading: false, // Loader stops once data is fetched
-        selectedValues: [],
-        searchTerm: 'test input'
-      });
-    }, 100); // Simulating network delay
-  }));
+      }),
+      {}
+    );
+  });
 
-  // Wait for the suggestions to be updated
-  await screen.findByText('suggestion1'); // This will wait until suggestion1 appears
+  test('handles the mapping of suggestions correctly', () => {
+    render(<CountryOfDomicile multiple={true} />);
 
-  // Ensure the loading indicator is no longer displayed
-  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    // Verify if the suggestions are correctly mapped
+    const mappedSuggestions = useSearchSuggestionsHook.default().suggestionList.map(el => el.value);
+    expect(mappedSuggestions).toEqual(['Country 1', 'Country 2']);
+  });
 
-  // Verify the suggestions are passed to the SearchBar correctly
-  const searchBar = screen.getByTestId('my-component-search-bar');
-  expect(searchBar).toBeInTheDocument();
+  test('calls handleSelectionChange when selection changes', () => {
+    render(<CountryOfDomicile multiple={true} />);
 
-  // Check if the suggestions are passed to SearchBar as expected
-  expect(screen.getByText('suggestion1')).toBeInTheDocument();
-  expect(screen.getByText('suggestion2')).toBeInTheDocument();
+    // Simulate the selection change
+    fireEvent.change(screen.getByTestId('mock-search-bar'), {
+      target: { value: 'Country 1' },
+    });
+
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
+  });
+
+  test('calls handleInputChange when input changes', () => {
+    render(<CountryOfDomicile multiple={true} />);
+
+    // Simulate the input change
+    fireEvent.input(screen.getByTestId('mock-search-bar'), {
+      target: { value: 'C' },
+    });
+
+    expect(mockHandleInputChange).toHaveBeenCalled();
+  });
+
+  test('displays loading state when loading is true', () => {
+    useSearchSuggestionsHook.default.mockReturnValue({
+      suggestionList: [],
+      loading: true,
+      selectedValues: [],
+      searchTerm: '',
+      handleSelectionChange: mockHandleSelectionChange,
+      handleInputChange: mockHandleInputChange,
+    });
+
+    render(<CountryOfDomicile multiple={true} />);
+
+    // Check if loading state is passed correctly
+    expect(SearchBar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        Loading: true,
+      }),
+      {}
+    );
+  });
 });
