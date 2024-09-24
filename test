@@ -1,111 +1,29 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect'; // for additional matchers
-import CountryOfDomicile from './CountryOfDomicile';
-import * as useSearchSuggestionsHook from '../../hooks/useSearchSuggestions'; // Mock the hook
-import SearchBar from '../../SearchBar/SearchBar'; // Mocked component
+Here is a sample email draft for your client, Bala, regarding the PI approval and a request for the approximate number of users:
 
-// Mock useSearchSuggestions to return specific values
-jest.mock('../../hooks/useSearchSuggestions');
-jest.mock('../../SearchBar/SearchBar', () => jest.fn(() => <div data-testid="mock-search-bar" />));
 
-describe('CountryOfDomicile Component', () => {
-  const mockHandleSelectionChange = jest.fn();
-  const mockHandleInputChange = jest.fn();
+---
 
-  beforeEach(() => {
-    // Mock the return values of the useSearchSuggestions hook
-    useSearchSuggestionsHook.default.mockReturnValue({
-      suggestionList: [{ value: 'Country 1' }, { value: 'Country 2' }],
-      loading: false,
-      selectedValues: [],
-      searchTerm: '',
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-    });
-  });
+Subject: PI Approval and Estimated User Count for LMS Project
 
-  afterEach(() => {
-    jest.clearAllMocks(); // Reset mock data after each test
-  });
+Dear Bala,
 
-  test('renders the SearchBar component', () => {
-    render(<CountryOfDomicile multiple={true} />);
+I hope this email finds you well.
 
-    // Verify if the SearchBar component is rendered
-    const searchBarElement = screen.getByTestId('mock-search-bar');
-    expect(searchBarElement).toBeInTheDocument();
-  });
+I wanted to bring to your attention the latest Process Improvement (PI) I have implemented for the LMS project. The PI focuses on optimizing the performance by converting SVG images to font icons using IcoMoon. This improvement significantly reduces the number of server requests, thereby enhancing the loading speed and overall user experience. A detailed document outlining the process and benefits has been attached for your review.
 
-  test('passes the correct props to SearchBar component', () => {
-    render(<CountryOfDomicile multiple={true} />);
+Could you kindly review the attached document and provide your approval for the implementation? Additionally, it would be helpful if you could share the approximate number of users who will be accessing the application, as this information is crucial for our performance testing and scaling considerations.
 
-    // Verify if SearchBar has received the correct props
-    expect(SearchBar).toHaveBeenCalledWith(
-      expect.objectContaining({
-        suggestions: [{ value: 'Country 1' }, { value: 'Country 2' }],
-        Loading: false,
-        selectedValues: [],
-        searchTerm: '',
-        multiple: true,
-        label: 'Country Of Domicile',
-        placeholder: 'Country Of Domicile',
-        Limit: true,
-        handleSelectionChange: mockHandleSelectionChange,
-        handleInputChange: mockHandleInputChange,
-      }),
-      {}
-    );
-  });
+Looking forward to your feedback.
 
-  test('handles the mapping of suggestions correctly', () => {
-    render(<CountryOfDomicile multiple={true} />);
+Thank you for your support.
 
-    // Verify if the suggestions are correctly mapped
-    const mappedSuggestions = useSearchSuggestionsHook.default().suggestionList.map(el => el.value);
-    expect(mappedSuggestions).toEqual(['Country 1', 'Country 2']);
-  });
+Best regards,
+[Your Name]
+[Your Position]
+[Your Contact Information]
 
-  test('calls handleSelectionChange when selection changes', () => {
-    render(<CountryOfDomicile multiple={true} />);
 
-    // Simulate the selection change
-    fireEvent.change(screen.getByTestId('mock-search-bar'), {
-      target: { value: 'Country 1' },
-    });
+---
 
-    expect(mockHandleSelectionChange).toHaveBeenCalled();
-  });
+Feel free to adjust the tone or details as needed!
 
-  test('calls handleInputChange when input changes', () => {
-    render(<CountryOfDomicile multiple={true} />);
-
-    // Simulate the input change
-    fireEvent.input(screen.getByTestId('mock-search-bar'), {
-      target: { value: 'C' },
-    });
-
-    expect(mockHandleInputChange).toHaveBeenCalled();
-  });
-
-  test('displays loading state when loading is true', () => {
-    useSearchSuggestionsHook.default.mockReturnValue({
-      suggestionList: [],
-      loading: true,
-      selectedValues: [],
-      searchTerm: '',
-      handleSelectionChange: mockHandleSelectionChange,
-      handleInputChange: mockHandleInputChange,
-    });
-
-    render(<CountryOfDomicile multiple={true} />);
-
-    // Check if loading state is passed correctly
-    expect(SearchBar).toHaveBeenCalledWith(
-      expect.objectContaining({
-        Loading: true,
-      }),
-      {}
-    );
-  });
-});
