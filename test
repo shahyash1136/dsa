@@ -1,42 +1,27 @@
-# Process Improvement Documentation
+Here's the updated version with your contact information:
 
-## Introduction
-This document outlines the process improvement (PI) implemented to enhance the performance of our Learning Management System (LMS) project. The improvement involved the conversion of SVG images into fonts using a third-party website, resulting in significant performance benefits.
-
-## 1. Why Did I Create This PI?
-The primary motivation for this PI stemmed from the need to optimize the performance and efficiency of our LMS project. In the initial implementation, each icon in the system was represented by an individual SVG image. While SVG images offer scalability and quality, using a large number of them resulted in multiple server requests. This not only increased the server load but also led to slower page load times, affecting the overall user experience. By addressing these issues, we aimed to:
-- Reduce the number of server requests.
-- Decrease the load on the server.
-- Enhance the loading speed of web pages.
-- Improve the user experience by ensuring quicker access to the icons.
-
-## 2. How Did I Resolve This Issue?
-To tackle the problem, I utilized the third-party website [IcoMoon](https://icomoon.io/app/#/select) to convert SVG images into fonts. Here are the steps I followed:
-1. **Selection of SVG Icons**: I selected the required SVG icons provided by the designer from our icon set.
-2. **Conversion to Font**: Using IcoMoon, I converted these SVG icons into a custom font.
-3. **Integration with CSS**: I created a CSS file to reference the newly created font. Each icon was mapped to a corresponding CSS class.
-4. **Implementation**: Instead of embedding individual SVG images in the HTML, I replaced them with the respective CSS classes referencing the font icons.
-   
-This process reduced the number of HTTP requests from 30 (for individual SVG images) to just 2 (one for the font file and one for the CSS file), thereby streamlining the resource loading process.
-
-## 3. What Benefits Did We Get with the PI?
-The implementation of this PI brought several benefits:
-- **Reduced Server Load**: By minimizing the number of HTTP requests, the load on the server was significantly reduced, leading to better server performance and reliability.
-  
-- **Faster Page Load Times**: With fewer resources to load, the web pages loaded faster, enhancing the user experience. Here is an approximate comparison of load times:
-  - **Single SVG Image**: Loading a single SVG image could take around 0.1-0.2 seconds.
-  - **30 SVG Images**: Loading 30 SVG images could take around 2-3 seconds, depending on the server speed and network conditions.
-  - **CSS and Fonts**: Loading the font file and CSS takes approximately 0.5-1 second. This is a considerable improvement over loading multiple SVG images.
-
-- **Efficient Resource Management**: Using a single font file for multiple icons ensured more efficient use of resources.
-
-- **Scalability and Flexibility**: The use of font icons provided greater flexibility in terms of scaling and styling, as fonts can be easily resized and colored using CSS without loss of quality.
-
-- **Improved User Experience**: Faster page loads and a more responsive interface contributed to a smoother and more pleasant user experience.
-
-## Conclusion
-In summary, the conversion of SVG images to font icons using the third-party website IcoMoon has proven to be a highly effective process improvement. This change has led to substantial performance enhancements, benefiting both the server's efficiency and the user's experience.
 
 ---
 
-For further details or inquiries, please refer to the third-party website used for this improvement: [IcoMoon](https://icomoon.io/app/#/select).
+Subject: Thank You All – A Grateful Goodbye
+
+Dear All,
+
+As today marks my last day, I wanted to take a moment to express my sincere gratitude to each one of you. These past two and a half years have been an incredible journey, filled with learning, growth, and wonderful collaborations.
+
+I feel fortunate to have had the opportunity to work with such a talented and supportive team. Each of you has played a role in shaping my experience here, and I have learned so much from all of you – both professionally and personally.
+
+Thank you for your guidance, patience, and camaraderie throughout this time. The knowledge and experiences I've gained will stay with me as I move forward in my career, and I’m truly grateful for all the support and encouragement.
+
+Please feel free to stay in touch! You can connect with me at +91 96645 33863.
+
+Wishing you all continued success and hoping our paths cross again in the future!
+
+Warm regards,
+[Your Name]
+
+
+---
+
+Let me know if you need any further adjustments!
+
