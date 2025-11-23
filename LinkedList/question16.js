@@ -1,5 +1,14 @@
-/* 
-*  Insert Ad at index 1.
+/* *
+16. Movie Queue\
+-   Remove B\
+-   Add F, G at end\
+-   Add V at start\
+-   Get index 3
+Solution
+-   Imse muje B ka value search kar ke nikalna he with custom function.
+-   Phir muje F,G ko add karna he with push method. -- done
+-   Phir muje V ko add karna he with unshift method. -- done
+-   Phir muje get method se value nikalni he with index  -- done
 */
 class Node {
     constructor(value) {
@@ -13,19 +22,19 @@ class LinkedList {
         const newNode = new Node(value);
         this.head = newNode;
         this.tail = newNode;
-        this.length = 1
+        this.length = 1;
     }
 
     unshift(value) {
-        const newNode = new Node(value);
+        let newNode = new Node(value);
         if (!this.head) {
             this.head = newNode;
-            this.tail = newNode
+            this.tail = newNode;
         } else {
             newNode.next = this.head;
             this.head = newNode;
         }
-        this.length++;
+        this.length++
         return this;
     }
 
@@ -36,14 +45,15 @@ class LinkedList {
         this.head = temp.next;
         temp.next = null;
         this.length--;
+
         if (this.length === 0) {
-            this.head = null;
             this.tail = null;
         }
+        return temp;
     }
 
     push(value) {
-        const newNode = new Node(value);
+        let newNode = new Node(value);
         if (!this.head) {
             this.head = newNode;
             this.tail = newNode;
@@ -57,18 +67,21 @@ class LinkedList {
 
     pop() {
         if (!this.head) return undefined;
+
         let temp = this.head;
         let prev = this.head;
         while (temp.next) {
             prev = temp;
             temp = temp.next;
         }
+
         this.tail = prev;
         this.tail.next = null;
         this.length--;
         if (this.length === 0) {
-            this.tail = null;
+            return null;
         }
+
         return temp;
     }
 
@@ -81,41 +94,42 @@ class LinkedList {
         return temp;
     }
 
-    set(index, value) {
-        let indexNode = this.get(index);
-        if (indexNode) {
-            indexNode.value = value;
-            return true;
+    searchByValue(value) {
+        if (!this.head) return undefined;
+        let temp = this.head;
+        while (temp) {
+            if (temp.value === value) {
+                return temp
+            }
+            temp = temp.next;
         }
-        return false;
+
+        return undefined;
     }
 
-    insert(index, value) {
-        if (index === 0) return this.unshift(value);
-        if (index === this.length) return this.push(value);
-        if (index < 0 || index >= this.length) return undefined;
+    removeByValue(value) {
+        if (!this.head) return undefined;
 
-        let newNode = new Node(value);
-        let prevNode = this.get(index - 1);
+        let node = this.searchByValue(value);
+        if (!node) return undefined;
 
-        newNode.next = prevNode.next;
-        prevNode.next = newNode;
-        this.length++;
-        return true;
-    }
+        if (node === this.head) return this.shift();
 
-    remove(index) {
-        if (index < 0 || index >= this.length) {
-            return undefined;
+        let temp = this.head;
+        while (temp.next !== node) {
+            temp = temp.next;
         }
-        if (index === 0) return this.shift();
-        if (index === this.length - 1) return this.pop();
 
-        let prevNode = this.get(index - 1);
-        let tempNode = prevNode.next;
-        prevNode.next = tempNode.next;
-        tempNode.next = null;
+        temp.next = node.next;
+
+        if (node === this.tail) {
+            this.tail = temp;
+        }
+        node.next = null;
         this.length--;
-        return tempNode;
+        if (this.length === 0) {
+            return null;
+        }
+        return node;
     }
 }
